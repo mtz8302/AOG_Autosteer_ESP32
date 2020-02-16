@@ -1,13 +1,18 @@
-//version for Fendt 209V 13.02.2020 by MTZ8302
+// ready for AOG V4  by MTZ8302  16.02.2020
 //##########################################################################################################
 //### Setup Zone ###########################################################################################
-// Set default values here. They can be changed in webinterface later. (x.x.x.77 or 192.168.1.1)
+//
+//Set default values here. They can be changed in webinterface later. (x.x.x.77 or 192.168.1.1)
+//
+//If you don't get access to webinterface, use serial monitor with USB. IP address is displayed at start.
+//
 //##########################################################################################################
 
 
-#define useLED_BUILTIN  0	  // some ESP board have a build in LED, some not
 
-#define HardwarePlatform  0  //0 = runs on ESP32 1 = run on NANO 33 IoT (not ready)
+#define useLED_BUILTIN  0	          // some ESP board have a build in LED, some not
+
+#define HardwarePlatform  0         //0 = runs on ESP32 1 = run on NANO 33 IoT (not working yet!!)
 
 
 struct Storage {
@@ -29,7 +34,7 @@ struct Storage {
 
 	uint8_t BNOInstalled = 0;         // set to 1 to enable BNO055 IMU
 
-	uint8_t InclinometerInstalled = 0; // set to 1 if MMA8452 is installed at address 1C (Adr PIN to GND) set to 2 at address 1D (Adr PIN open)
+	uint8_t InclinometerInstalled = 0;// set to 1 if MMA8452 is installed at address 1C (Adr PIN to GND) set to 2 at address 1D (Adr PIN open)
 
 	uint8_t UseMMA_X_Axis = 0;
 
@@ -47,35 +52,34 @@ struct Storage {
 	uint8_t SteerSwitch = 1;          //0 = enable = switch high (3,3V) //1 = enable = switch low(GND) //2 = toggle = button to low(GND)
 								                    //3 = enable = button to high (3,3V), disable = button to low (GND), neutral = 1,65V
 
-	uint8_t SteerSwitch_toRemoteAutosteer = 1;//unused
+	uint8_t SteerSwitch_toRemoteAutosteer = 1;  //not working yet
 
-	uint8_t WorkSW_mode = 2;          // 0 = disabled   1 = digital ON/OFF  2 = analog Value 0...4095 (0 - 3,3V)
+	uint8_t WorkSW_mode = 2;          // 0 = disabled   // 1 = digital ON/OFF // 2 = analog Value 0...4095 (0 - 3,3V)
 
 	uint8_t Invert_WorkSW = 0;        // 0 = Hitch raised -> High    // 1 = Hitch raised -> Low
- 
-  uint16_t WorkSW_Threshold = 1450; // Value for analog hitch level to switch workswitch 
-  
-	uint8_t autoSteerMinSpeed = 3;    // AOG sends speed * 4 as byte so lowest is 1 = 0.25 km/h 2=0.5 3=0.75 4=1 km/h 
+
+	uint8_t autoSteerMinSpeed = 3;    //AOG sends speed * 4 as byte so lowest is 1 = 0.25 km/h 2=0.5 3=0.75 4=1 km/h
+
+	uint16_t WorkSW_Threshold = 1450; // Value for analog hitch level to switch workswitch  (0-4096)
 	
 	// IO pins --------------------------------
 
 	// set to 255 for unused !!!!!
+	uint8_t SDA = 32;//21			        //I2C Pins
+	uint8_t SCL = 15;//22
 
-	uint8_t SDA = 32;			            //I2C Pins
-	uint8_t SCL = 15;
-
-	uint8_t AutosteerLED_PIN = 19;    //light on active autosteer, also input to activate IBT2
-	uint8_t LEDWiFi_PIN = 18;		      //light on WiFi connected, flashes on searching Network
+	uint8_t AutosteerLED_PIN = 19;    //light on active autosteer
+	uint8_t LEDWiFi_PIN = 18;         //light on WiFi connected, flashes on searching Network
 	uint8_t LEDWiFi_ON_Level = HIGH;	//HIGH = LED on high, LOW = LED on low
 
 	uint8_t Relay1_PIN = 255;
 	uint8_t Relay2_PIN = 255;
 	uint8_t Relays_ON = HIGH;		      //HIGH = Relay on high, LOW = Relay on low
 
-	uint8_t W_A_S = 255;		          //PIN for Wheel Angle Sensor (none, if ADS used)
+	uint8_t W_A_S = 255;              //PIN for Wheel Angle Sensor (none, if ADS used)
 	uint8_t WORKSW_PIN = 39;          //PIN for workswitch (can be analog or on/off switch see WorkSW_mode)
-	uint8_t STEERSW_PIN = 5;	        //Pin for steer button or switch (see SteerSwitch)
-	uint8_t REMOTE_PIN = 255;		      //PIN for switch to turn AOG autosteer ON/OFF
+	uint8_t STEERSW_PIN = 5;          //Pin for steer button or switch (see SteerSwitch)
+	uint8_t REMOTE_PIN = 255;		      //PIN for AOG autosteer ON/OFF
 	uint8_t encA_PIN = 255;           //Pin for steer encoder, to turn off autosteer if steering wheel is used
 	uint8_t encB_PIN = 255;           //Pin for steer encoder, to turn off autosteer if steering wheel is used
 
@@ -102,12 +106,12 @@ struct Storage {
 	uint16_t portDestination = 9999;            // Port of AOG that listens
 
 	//filter variables set by AOG via PGN settings sentence, stored automatically in EEPROM for faster start
-	float Ko = 0.05f;  //overall gain  
-	float Kp = 5.0f;  //proportional gain  
-	float Ki = 0.001f;//integral gain
-	float Kd = 1.0f;  //derivative gain 
+	float Ko = 0.05f;   //overall gain  
+	float Kp = 5.0f;    //proportional gain  
+	float Ki = 0.001f;  //integral gain
+	float Kd = 1.0f;    //derivative gain 
 	float steeringPositionZero = 13000;  uint8_t minPWMValue = 10;
-	uint16_t maxIntegralValue = 20;//max PWM value for integral PID component
+	uint16_t maxIntegralValue = 20; //max PWM value for integral PID component
 	float steerSensorCounts = 100;  uint16_t roll_corr = 200;
 	
 	
@@ -116,7 +120,7 @@ struct Storage {
 
 };  Storage steerSet;
 
-boolean EEPROM_clear = false;
+boolean EEPROM_clear = false;  //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again
 
 
 
@@ -141,10 +145,10 @@ boolean EEPROM_clear = false;
 
 #define A 0X28             //I2C address selection pin LOW BNO055
 #define B 0x29             //                          HIGH
-//#define RAD2GRAD 57.2957795
 
 // Instances ------------------------------
 Adafruit_ADS1115 ads;     // Use this for the 16-bit version ADS1115
+//MMA8452 accelerometer;
 MMA8452 MMA1D(0x1D);
 MMA8452 MMA1C(0x1C);
 BNO055 IMU(A);
@@ -155,6 +159,7 @@ WiFiUDP UDPToAOG;
 
 // Variables ------------------------------
 byte my_WiFi_Mode = 0;  // WIFI_STA = 1 = Workstation  WIFI_AP = 2  = Accesspoint
+
 // WiFi status LED blink times: searching WIFI: blinking 4x faster; connected: blinking as times set; data available: light on; no data for 2 seconds: blinking
 unsigned long LED_WIFI_time = 0;
 unsigned long LED_WIFI_pulse = 1000;   //light on in ms 
@@ -175,7 +180,6 @@ float XeRoll = 0;
 const float varRoll = 0.1; // variance,
 const float varProcess = 0.001; //0,00025 smaller is more filtering
 
-
 //program flow
 bool isDataFound = false, isSettingFound = false, isMachineFound = false, steerSettingChanged = false;
 bool MMAinitialized = false;
@@ -195,8 +199,6 @@ float steerAngleError = 0; //setpoint - actual
 int  pulseCount = 0, prevEncAState = 0, prevEncBState = 0; // Steering Wheel Encoder
 bool encDebounce = false; // Steering Wheel Encoder
 
-//AP_running = 0, EE_done = 0,header = 0, tempHeader = 0, temp, count = 0;byte tempByt = 0;
-//float tempFlo = 0;
 //IMU, inclinometer variables
 bool imu_initialized = 0;
 int16_t roll = 0, heading = 0;
@@ -221,7 +223,8 @@ byte state_after = 0, state_previous = 0, breakreason = 0;
 
 
 
-// Setup procedure ------------------------
+// Setup procedure -----------------------------------------------------------------------------------------------
+
 void setup() {
 	delay(300);//wait for power to stabilize
 	delay(300);//wait for IO chips to get ready
@@ -266,7 +269,7 @@ void setup() {
 	else { Serial.println("data transfer via UDP"); }
 }
 
-
+// Main loop -----------------------------------------------------------------------------------------------
 
 
 void loop() {
@@ -402,8 +405,6 @@ void loop() {
 
 	SetRelays(); //turn on off sections
 
-  delay(1);//do wifi
-
 	//timed loop
 	//* Loop triggers every 100 msec and sends back gyro heading, and roll, steer angle etc
 	currentTime = millis();
@@ -535,7 +536,7 @@ void loop() {
 	//steering position and steer angle
 		switch (steerSet.input_type) {
 		case 1:  // ADS 1115 single
-			steeringPosition = ads.readADC_SingleEnded(0);    delay(1);           //ADS1115 Standard Mode
+			steeringPosition = ads.readADC_SingleEnded(0);    delay(1);        //ADS1115 Standard Mode
 			steeringPosition += ads.readADC_SingleEnded(0);    delay(1);
 			steeringPosition += ads.readADC_SingleEnded(0);    delay(1);
 			steeringPosition += ads.readADC_SingleEnded(0);
@@ -599,26 +600,35 @@ void loop() {
 		//Build Autosteer Packet completed
 		//send packet
 		if (steerSet.DataTransVia == 0) {
-			//USB
-			for (byte n = 0; n <= 8; n++) {
-				Serial.write(toSend[n]);
-				if (n < 8) { Serial.print(","); }
-			}
+			//USB  //NO header with serial data!!			
+			//steerangle			
+			Serial.print(int(steerAngleActual*100)); Serial.print(",");
+			//steerangle set point NOT used in AOG!!
+			Serial.print(int(steerAngleSetPoint * 100)); Serial.print(",");
+			//heading from BNO
+			if (steerSet.BNOInstalled == 1) { Serial.print(heading); }
+			else {Serial.print(0);}
+			Serial.print(",");
+			//roll from MMA
+			Serial.print(int(XeRoll*100)); Serial.print(",");
+			//switch byte
+			Serial.print(toSend[8]);
 			Serial.println();
 		}
 		else { Send_UDP(); delay(2); }//transmit to AOG
 
 		if (steerSet.debugmode) {
 			//Send to agopenGPS **** you must send 5 numbers ****
-			Serial.println("Data to AOG: steerangle, switchByte,roll * 16, IMU heading ");
+			Serial.println("Data to AOG: steerangle, steerangleSetPoint, IMU heading, roll, switchByte,");
 			Serial.print(steerAngleActual); //The actual steering angle in degrees
 			Serial.print(",");
-			Serial.print(switchByte); //The actual steering angle in counts
+			Serial.print(steerAngleSetPoint);
 			Serial.print(",");
-			Serial.print(XeRoll / 16);   //the pwm value to solenoids or motor
+			Serial.print(IMU.euler.head);   
+			Serial.println(",");
+			Serial.print(XeRoll);   
 			Serial.print(",");
-			//Serial.print(IMU.euler.head/16);   //the pwm value to solenoids or motor
-			Serial.println("");
+			Serial.println(switchByte); 
 		}
 	}  //end of timed loop
 }
