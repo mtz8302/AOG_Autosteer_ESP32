@@ -10,7 +10,7 @@
 
 
 
-#define useLED_BUILTIN  1	          // some ESP board have a build in LED, some not
+#define useLED_BUILTIN  0	          // some ESP board have a build in LED, some not
 
 #define HardwarePlatform  0         //0 = runs on ESP32 1 = run on NANO 33 IoT (not working yet!!)
 
