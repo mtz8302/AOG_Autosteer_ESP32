@@ -26,7 +26,7 @@ struct Storage {
 								                    //set to 2  if you want to use Stering Motor + IBT 2  Driver
 								                    //set to 3  if you want to use IBT 2  Driver + PWM 2-Coil Valve
 								                    //set to 4  if you want to use  IBT 2  Driver + Danfoss Valve PVE A/H/M
-	uint16_t PWMOutFrequ = 20000;     //PWM frequenzy for motordriver: 1000Hz:for low heat at PWM device 20000Hz: not hearable
+	uint16_t PWMOutFrequ = 20000;     //PWM frequency for motordriver: 1000Hz:for low heat at PWM device 20000Hz: not hearable
 
 	uint8_t input_type = 2;           //0 = No ADS installed, Wheel Angle Sensor connected directly to ESP at GPIO 4 (attention 3,3V only)
 								                    //1 = Single Mode of ADS1115 - Sensor Signal at A0 (ADS)
