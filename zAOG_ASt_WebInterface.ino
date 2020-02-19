@@ -186,6 +186,7 @@ void process_Request()
 		//int temp = Pick_Parameter_Zahl("AOGNTRIP=", HTML_String);
 		if (Pick_Parameter_Zahl("DataTransfVia=", HTML_String) == 0) steerSet.DataTransVia = 0;
 		if (Pick_Parameter_Zahl("DataTransfVia=", HTML_String) == 1) steerSet.DataTransVia = 1;
+		if (Pick_Parameter_Zahl("DataTransfVia=", HTML_String) == 4) steerSet.DataTransVia = 4;
 		EEprom_write_all();
 	}
 
@@ -346,7 +347,8 @@ void make_HTML01() {
 	strcat(HTML_String, "<font color=\"#000000\" face=\"VERDANA,ARIAL,HELVETICA\">");
 	strcat(HTML_String, "<h1>AG Autosteer ESP config page</h1>");
 	strcat(HTML_String, "by WEder/coffeetrac and MTZ8302<br>");
-	strcat(HTML_String, "ver 4.00 9. Febr. 2020<br><br><hr>");
+	strcat(HTML_String, "ver 4.00 18. Febr. 2020<br><br><hr>");
+
 	//---------------------------------------------------------------------------------------------  
 	//load values of INO setup zone
 	strcat(HTML_String, "<h2>Load default values of INO setup zone</h2>");
@@ -422,13 +424,18 @@ void make_HTML01() {
 	set_colgroup(300, 250, 150, 0, 0);
 
 	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td></td><td><input type = \"radio\" name=\"DataTransfVia\" id=\"JZ\" value=\"0\"");
+	strcat(HTML_String, "<td>AOG 2019 and before</td><td><input type = \"radio\" name=\"DataTransfVia\" id=\"JZ\" value=\"0\"");
 	if (steerSet.DataTransVia == 0)strcat(HTML_String, " CHECKED");
-	strcat(HTML_String, "><label for=\"JZ\">USB</label></td>");
+	strcat(HTML_String, "><label for=\"JZ\">USB 8 byte sentence </label></td>");
 	strcat(HTML_String, "<td><button style= \"width:120px\" name=\"ACTION\" value=\"");
 	strcati(HTML_String, ACTION_SET_DataTransfVia);
 	strcat(HTML_String, "\">Apply and Save</button></td>");
 	strcat(HTML_String, "</tr>");
+
+	strcat(HTML_String, "<tr>");
+	strcat(HTML_String, "<td>AOG V4</td><td><input type = \"radio\" name=\"DataTransfVia\" id=\"JZ\" value=\"4\"");
+	if (steerSet.DataTransVia == 4)strcat(HTML_String, " CHECKED");
+	strcat(HTML_String, "><label for=\"JZ\">USB 10 byte sentence </label></td></tr>");
 
 	strcat(HTML_String, "<tr>");
 	strcat(HTML_String, "<td></td><td><input type = \"radio\" name=\"DataTransfVia\" id=\"JZ\" value=\"1\"");
@@ -579,7 +586,8 @@ void make_HTML01() {
 	for (int i = 0; i < 5; i++) {
 		strcat(HTML_String, "<tr>");
 		if (i == 0)  strcat(HTML_String, "<td><b>Select your output type</b></td>");
-		else strcat(HTML_String, "<td> </td>");
+		else if (i == 1) strcat(HTML_String, "<td>SWM: Steer Wheel Motor</td>");
+			else strcat(HTML_String, "<td> </td>");
 		strcat(HTML_String, "<td><input type = \"radio\" name=\"OUTPUT_TYPE\" id=\"JZ");
 		strcati(HTML_String, i);
 		strcat(HTML_String, "\" value=\"");

@@ -1,4 +1,4 @@
-// ready for AOG V4  by MTZ8302  16.02.2020
+// ready for AOG V4  by MTZ8302  18.02.2020
 //##########################################################################################################
 //### Setup Zone ###########################################################################################
 //
@@ -10,7 +10,7 @@
 
 
 
-#define useLED_BUILTIN  0	          // some ESP board have a build in LED, some not
+#define useLED_BUILTIN  1	          // some ESP board have a build in LED, some not
 
 #define HardwarePlatform  0         //0 = runs on ESP32 1 = run on NANO 33 IoT (not working yet!!)
 
@@ -20,7 +20,7 @@ struct Storage {
 	char password[24] = "";           // WiFi network password
 	uint16_t timeoutRouter = 100;     // Time (seconds) to wait for WIFI access, after that own Access Point starts
 
-	uint8_t DataTransVia = 1;         //transfer data via 0: USB 1: WiFi
+	uint8_t DataTransVia = 1;         //transfer data via 0: USB, 1: WiFi, 4: USB 10 byte format for AOG V4
 
 	uint8_t output_type = 2;          //set to 1  if you want to use Stering Motor + Cytron MD30C Driver
 								                    //set to 2  if you want to use Stering Motor + IBT 2  Driver
@@ -47,12 +47,12 @@ struct Storage {
 
 	uint16_t SteerPosZero = 10300;	  // first value for steer zero position ADS: 11000 for EPS32 AD PIN: 2048
 
-	uint8_t SteerRightMultiplyer = 77;//if values for left and right are the same: 100 
+	uint8_t SteerRightMultiplyer = 100;//if values for left and right are the same: 100 
 
 	uint8_t SteerSwitch = 1;          //0 = enable = switch high (3,3V) //1 = enable = switch low(GND) //2 = toggle = button to low(GND)
 								                    //3 = enable = button to high (3,3V), disable = button to low (GND), neutral = 1,65V
 
-	uint8_t SteerSwitch_toRemoteAutosteer = 1;  //not working yet
+	uint8_t SteerSwitch_toRemAutost = 1;  //may not work, just a test
 
 	uint8_t WorkSW_mode = 2;          // 0 = disabled   // 1 = digital ON/OFF // 2 = analog Value 0...4095 (0 - 3,3V)
 
@@ -121,8 +121,6 @@ struct Storage {
 };  Storage steerSet;
 
 boolean EEPROM_clear = false;  //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again
-
-
 
 
 //libraries -------------------------------
@@ -238,11 +236,9 @@ void setup() {
 	restoreEEprom();
 	delay(300);
 
-	//writ PGN to output sentence
+	//write PGN to output sentence
 	toSend[0] = steerSet.DataToAOGHeader[0];
 	toSend[1] = steerSet.DataToAOGHeader[1];
-
-
 
 	//set GPIOs
 	assignGPIOs_start_extHardware();
@@ -252,10 +248,6 @@ void setup() {
 	WiFi_Start_STA();
 	if (my_WiFi_Mode == 0) WiFi_Start_AP(); // if failed start AP
 	delay(500);
-
-#if (useOLED_Display)
-	display_start();  // Greetings
-#endif
 
 	Serial.print("gain of ADS1115: ");
 	Serial.println(ads.getGain());
@@ -311,11 +303,11 @@ void loop() {
 		}
 		break;
 	case 2:
-		if (toggleSteerEnable == 1) //set by interrupt void: Steersw_ISR();
+		if (toggleSteerEnable) //may set to true in timed loop (to debounce)
 		{
 			steerEnable = !steerEnable;
 			if (steerSet.debugmode) { Serial.println("Steer-Break: IRQ occured? Button pressed?"); }
-			toggleSteerEnable = 0;
+			toggleSteerEnable = false;
 			if (steerEnable) watchdogTimer = 0;
 		}
 	case 3:
@@ -335,10 +327,6 @@ void loop() {
 
 	//turn autosteer OFF or ON
 	if (steerEnable) {//steerEnable was set by switch so now check if really can turn on
-
-
-		//distance from line might be wrong from AOG!!
-		//Serial.print(distanceFromLine); Serial.print(" :distance from line   speed: "); Serial.println(speed);
 
 		//auto Steer is off if 32020,Speed is too slow, encoder pulses 
 		if ((int(distanceFromLine) == 32020) || (gpsSpeed < (float(steerSet.autoSteerMinSpeed) / 4))
@@ -390,7 +378,6 @@ void loop() {
 		//we've lost the comm to AgOpenGPS
 		state_previous = steerEnable;   // Debug only
 		steerEnable = false;
-		//if (steerEnable != state_previous) Serial.println("Steer-Break: WDT runs out");    // Debug only
 
 		if (steerEnable != state_previous) {
 			Serial.println("Steer-Break: watch dog timer runs out, no Data from AOG");    // Debug only
@@ -405,7 +392,7 @@ void loop() {
 
 	SetRelays(); //turn on off sections
 
-	//timed loop
+//timed loop
 	//* Loop triggers every 100 msec and sends back gyro heading, and roll, steer angle etc
 	currentTime = millis();
 	unsigned int time = currentTime;
@@ -517,12 +504,12 @@ void loop() {
 		}
 
 		//read auto steer enable switch open = ON closed = OFF  or send steerSwitch if activated in settings
-		if (steerSet.SteerSwitch_toRemoteAutosteer == 0) {
+		if (steerSet.SteerSwitch_toRemAutost == 0) {
 			remoteSwitch = digitalRead(steerSet.REMOTE_PIN); 
 		}
 		else {
-			if ((steerSet.SteerSwitch_toRemoteAutosteer == 2) && (steerSet.SteerSwitch <= 1)) {
-				//steerswitch goes to AOG autosteer enable if steerswitch is not a toggle button
+			if ((steerSet.SteerSwitch_toRemAutost == 1) && (steerSet.SteerSwitch > 0)) {
+				//steerswitch goes to AOG autosteer enable 
 				remoteSwitch = steerEnable;
 			}
 		}
@@ -599,7 +586,10 @@ void loop() {
 
 		//Build Autosteer Packet completed
 		//send packet
-		if (steerSet.DataTransVia == 0) {
+		if (steerSet.DataTransVia == 4) //send 2 header bytes first
+			{ Serial.print(steerSet.DataToAOGHeader[0]); Serial.print(","); 
+			Serial.print(steerSet.DataToAOGHeader[1]); Serial.print(",");}
+		if ((steerSet.DataTransVia == 0) || (steerSet.DataTransVia == 4)) {
 			//USB  //NO header with serial data!!			
 			//steerangle			
 			Serial.print(int(steerAngleActual*100)); Serial.print(",");
@@ -618,14 +608,13 @@ void loop() {
 		else { Send_UDP(); delay(2); }//transmit to AOG
 
 		if (steerSet.debugmode) {
-			//Send to agopenGPS **** you must send 5 numbers ****
 			Serial.println("Data to AOG: steerangle, steerangleSetPoint, IMU heading, roll, switchByte,");
 			Serial.print(steerAngleActual); //The actual steering angle in degrees
 			Serial.print(",");
 			Serial.print(steerAngleSetPoint);
 			Serial.print(",");
-			Serial.print(IMU.euler.head);   
-			Serial.println(",");
+			Serial.print(heading);   
+			Serial.print(",");
 			Serial.print(XeRoll);   
 			Serial.print(",");
 			Serial.println(switchByte); 

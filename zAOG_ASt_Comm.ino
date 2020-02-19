@@ -10,9 +10,7 @@ void getDataFromAOG()
 
 	//get new AOG Data
 	//USB
-	if (steerSet.DataTransVia == 0) {
-
-		incomingByteNum = 0;
+	if ((steerSet.DataTransVia == 0) || (steerSet.DataTransVia == 4)) {		
 
 		while (Serial.available())
 		{
@@ -30,8 +28,17 @@ void getDataFromAOG()
 				if ((incomingBytes[0] == steerSet.DataFromAOGHeader[0]) || (incomingBytes[0] == steerSet.SettingsFromAOGHeader[0]))
 				{
 					incomingBytes[0] = Serial.read();
-					if (incomingBytes[0] == steerSet.DataFromAOGHeader[1]) { isDataFound = true; }
-					if (incomingBytes[0] == steerSet.SettingsFromAOGHeader[1]) { isSettingFound = true; }
+					if (incomingBytes[0] == steerSet.DataFromAOGHeader[1]) { 
+						isDataFound = true; 
+						DataFromAOG[0] = steerSet.DataFromAOGHeader[0];
+						DataFromAOG[1] = steerSet.DataFromAOGHeader[1];
+						incomingByteNum = 2; }
+					if (incomingBytes[0] == steerSet.SettingsFromAOGHeader[1]) { 
+						isSettingFound = true; 
+						DataFromAOG[0] = steerSet.SettingsFromAOGHeader[0];
+						DataFromAOG[1] = steerSet.SettingsFromAOGHeader[1];
+						incomingByteNum = 2;
+					}
 					if (steerSet.debugmode) { Serial.print("data from AOG via USB: "); }
 				}
 			}
@@ -74,28 +81,18 @@ void getDataFromAOG()
 	if (isDataFound)
 	{
 		if (steerSet.debugmode) { Serial.println("steer data from AOG received"); }
-		//relay = DataFromAOG[2];   // read relay control from AgOpenGPS     
+		relay = DataFromAOG[2];   // read relay control from AgOpenGPS     
 		gpsSpeed = float(DataFromAOG[3]) / 4;  //actual speed times 4, single byte
-
-
-//		Serial.print("speed from AOG "); Serial.print(gpsSpeed);
-//		Serial.print(" Data Byte 2: "); Serial.println(DataFromAOG[2]);
-
 
 		//distance from the guidance line in mm
 		olddist = distanceFromLine;
-		//Serial.print(DataFromAOG[3]); Serial.print(" "); Serial.println(DataFromAOG[4]);
 		idistanceFromLine = (DataFromAOG[4] << 8 | DataFromAOG[5]);   //high,low bytes     
 		distanceFromLine = (float)idistanceFromLine;
 
 		//set point steer angle * 10 is sent
 		isteerAngleSetPoint = ((DataFromAOG[6] << 8 | DataFromAOG[7])); //high low bytes 
 		steerAngleSetPoint = (float)isteerAngleSetPoint * 0.01;
-		/*
-		Serial.print(steerAngleActual);   //the pwm value to solenoids or motor
-		Serial.print(",");
-		Serial.println(XeRoll);
-		 */
+
 		DataFromAOGTime = millis();
 	}
 

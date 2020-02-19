@@ -54,7 +54,7 @@ void WiFi_LED_blink()
 //-------------------------------------------------------------------------------------------------
 
 /* interrups didn't work with UDP: replaced by check of button state in timed loop of main loop, so 10Hz checked, no need to debounce
-//ISR SteerSwitch_toRemoteAutosteer Interrupt if steerswitch is a button
+//ISR SteerSwitch_toRemAutost Interrupt if steerswitch is a button
 void Steersw_ISR() // handle pin change interrupt for Steersw Pin 
 {
 	static unsigned long last_interrupt_time = 0;
