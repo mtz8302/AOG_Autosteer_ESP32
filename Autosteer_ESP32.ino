@@ -10,7 +10,7 @@
 
 
 
-#define useLED_BUILTIN  0	          // some ESP board have a build in LED, some not
+#define useLED_BUILTIN  1	          // some ESP board have a build in LED, some not
 
 #define HardwarePlatform  0         //0 = runs on ESP32 1 = run on NANO 33 IoT (not working yet!!)
 
@@ -47,7 +47,7 @@ struct Storage {
 
 	uint16_t SteerPosZero = 10300;	  // first value for steer zero position ADS: 11000 for EPS32 AD PIN: 2048
 
-	uint8_t SteerRightMultiplyer = 100;//if values for left and right are the same: 100 
+	uint8_t SteerRightMultiplyer = 77;//if values for left and right are the same: 100 
 
 	uint8_t SteerSwitch = 1;          //0 = enable = switch high (3,3V) //1 = enable = switch low(GND) //2 = toggle = button to low(GND)
 								                    //3 = enable = button to high (3,3V), disable = button to low (GND), neutral = 1,65V
@@ -257,8 +257,11 @@ void setup() {
 	delay(500);
 	Serial.print("Debugmode "); if (steerSet.debugmode) { Serial.println("ON"); }
 	else { Serial.println("OFF"); }
-	if (steerSet.DataTransVia == 0) { Serial.println("data transfer via USB"); }
-	else { Serial.println("data transfer via UDP"); }
+	if (steerSet.DataTransVia == 0) { Serial.println("data transfer via USB 8 Byte sentence AOG -2019"); }
+	else {
+		if (steerSet.DataTransVia == 4) { Serial.println("data transfer via USB 10 Byte sentence AOG V4"); }
+		else { Serial.println("data transfer via UDP"); }
+	}
 }
 
 // Main loop -----------------------------------------------------------------------------------------------
