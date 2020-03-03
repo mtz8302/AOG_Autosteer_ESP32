@@ -76,70 +76,71 @@ void doWebInterface() {
 			Serial.print("Client connection timeout!\n");
 			break;// return;
 		}
-	}
-	if (!client_page)  return;
 
-	Serial.println("New Client:");           // print a message out the serial port
+		if (!client_page)  return;
 
-	char c;
-	if (client_page) {                        // if you get a client,
-	  //Serial.print("New Client.\n");                   // print a message out the serial port
-		String currentLine = "";                // make a String to hold incoming data from the client
-		while (client_page.connected()) {       // loop while the client's connected
-			if (client_page.available()) {        // if there's bytes to read from the client,
-				char c = client_page.read();        // read a byte, then
-				Serial.print(c);                             // print it out the serial monitor
-				if (c == '\n') {                    // if the byte is a newline character
+		Serial.println("New Client:");           // print a message out the serial port
 
-				  // if the current line is blank, you got two newline characters in a row.
-				  // that's the end of the client HTTP request, so send a response:
-					if (currentLine.length() == 0) {
+		char c;
+		if (client_page) {                        // if you get a client,
+		  //Serial.print("New Client.\n");                   // print a message out the serial port
+			String currentLine = "";                // make a String to hold incoming data from the client
+			while (client_page.connected()) {       // loop while the client's connected
+				if (client_page.available()) {        // if there's bytes to read from the client,
+					char c = client_page.read();        // read a byte, then
+					Serial.print(c);                             // print it out the serial monitor
+					if (c == '\n') {                    // if the byte is a newline character
 
-						make_HTML01();  // create Page array
-					   //---------------------------------------------------------------------
-					   // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-					   // and a content-type so the client knows what's coming, then a blank line:
-						strcpy(HTTP_Header, "HTTP/1.1 200 OK\r\n");
-						strcat(HTTP_Header, "Content-Length: ");
-						strcati(HTTP_Header, strlen(HTML_String));
-						strcat(HTTP_Header, "\r\n");
-						strcat(HTTP_Header, "Content-Type: text/html\r\n");
-						strcat(HTTP_Header, "Connection: close\r\n");
-						strcat(HTTP_Header, "\r\n");
+					  // if the current line is blank, you got two newline characters in a row.
+					  // that's the end of the client HTTP request, so send a response:
+						if (currentLine.length() == 0) {
 
-						client_page.print(HTTP_Header);
-						delay(20);
-						send_HTML();
+							make_HTML01();  // create Page array
+						   //---------------------------------------------------------------------
+						   // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
+						   // and a content-type so the client knows what's coming, then a blank line:
+							strcpy(HTTP_Header, "HTTP/1.1 200 OK\r\n");
+							strcat(HTTP_Header, "Content-Length: ");
+							strcati(HTTP_Header, strlen(HTML_String));
+							strcat(HTTP_Header, "\r\n");
+							strcat(HTTP_Header, "Content-Type: text/html\r\n");
+							strcat(HTTP_Header, "Connection: close\r\n");
+							strcat(HTTP_Header, "\r\n");
 
-						// break out of the while loop:
-						break;
-					}
-					else {    // if you got a newline, then clear currentLine:
-						currentLine = "";
-					}
-				}
-				else if (c != '\r')
-				{ // if you got anything else but a carriage return character,
-					currentLine += c;      // add it to the end of the currentLine
-					if (currentLine.endsWith("HTTP"))
-					{
-						if (currentLine.startsWith("GET "))
-						{
-							currentLine.toCharArray(HTML_String, currentLine.length());
-							Serial.println(); //NL
-							exhibit("Request : ", HTML_String);
-							process_Request();
+							client_page.print(HTTP_Header);
+							delay(20);
+							send_HTML();
+
+							// break out of the while loop:
+							break;
+						}
+						else {    // if you got a newline, then clear currentLine:
+							currentLine = "";
 						}
 					}
-				}//end else
-			} //end client available
-		} //end while client.connected
-		// close the connection:
-		client_page.stop();
-		Serial.print("Pagelength : ");
-		Serial.print((long)strlen(HTML_String));
-		Serial.print("   --> Client Disconnected\n");
-	}// end if client 
+					else if (c != '\r')
+					{ // if you got anything else but a carriage return character,
+						currentLine += c;      // add it to the end of the currentLine
+						if (currentLine.endsWith("HTTP"))
+						{
+							if (currentLine.startsWith("GET "))
+							{
+								currentLine.toCharArray(HTML_String, currentLine.length());
+								Serial.println(); //NL
+								exhibit("Request : ", HTML_String);
+								process_Request();
+							}
+						}
+					}//end else
+				} //end client available
+			} //end while client.connected
+			// close the connection:
+			client_page.stop();
+			Serial.print("Pagelength : ");
+			Serial.print((long)strlen(HTML_String));
+			Serial.print("   --> Client Disconnected\n");
+		}// end if client 
+	}//while connected and no timeout
 }
 
 
