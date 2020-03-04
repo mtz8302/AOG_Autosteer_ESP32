@@ -55,7 +55,7 @@ char encoder_type_tab[2][11] = { "None", "Installed" };
 char tmp_string[20];
 
 //---------------------------------------------------------------------
-
+// 4. Maerz 2020
 
 void doWebInterface() {
 
@@ -65,27 +65,34 @@ void doWebInterface() {
 	int myIndex;
 	unsigned long my_timeout;
 
+	// Check if a client has connected
 	client_page = server.available();
 
-	my_timeout = millis() + 250L;
+	if (!client_page)  return;
+
+	Serial.println("New Client:");           // print a message out the serial port
+
+	my_timeout = millis() + 500L;
 
 	while (client_page.connected() && (millis() < my_timeout)) {
 		delay(10);
 		if (millis() > my_timeout)
 		{
 			Serial.print("Client connection timeout!\n");
+			client_page.flush();
+			client_page.stop();
 			break;// return;
 		}
 
-		if (!client_page)  return;
-
-		Serial.println("New Client:");           // print a message out the serial port
-
+		//   if (client_page.available()) {
+			   //---------------------------------------------------------------------
+			   //htmlPtr = 0;
 		char c;
 		if (client_page) {                        // if you get a client,
 		  //Serial.print("New Client.\n");                   // print a message out the serial port
 			String currentLine = "";                // make a String to hold incoming data from the client
 			while (client_page.connected()) {       // loop while the client's connected
+				delay(0);
 				if (client_page.available()) {        // if there's bytes to read from the client,
 					char c = client_page.read();        // read a byte, then
 					Serial.print(c);                             // print it out the serial monitor
