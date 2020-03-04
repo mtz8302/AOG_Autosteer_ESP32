@@ -273,7 +273,10 @@ void loop() {
 	doWebInterface();
 	
 	WiFi_LED_blink();
-
+	
+#if HardwarePlatform == 1 //nano33iot
+        delay(5);//do WiFi
+#endif
 	getDataFromAOG();
 
 	//check, if steering wheel is moved. Debounce set to LOW in timed loop 10Hz
