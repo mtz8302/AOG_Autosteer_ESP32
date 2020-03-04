@@ -95,7 +95,9 @@ void getDataFromAOG()
 
 		DataFromAOGTime = millis();
 	}
-
+#if HardwarePlatform == 1 //nano33iot
+        else delay(5);//do WiFi
+#endif
 	//autosteer settings packet
 	if (isSettingFound)
 	{
