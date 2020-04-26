@@ -1,4 +1,4 @@
-// ready for AOG V4  by MTZ8302  22.03.2020
+// ready for AOG V4 + V4.2  by MTZ8302  26.04.2020
 //##########################################################################################################
 //### Setup Zone ###########################################################################################
 //
@@ -10,7 +10,7 @@
 
 
 
-#define useLED_BUILTIN  0	          // some ESP board have a build in LED, some not
+#define useLED_BUILTIN  1	          // some ESP board have a build in LED, some not
 
 #define HardwarePlatform  0         //0 = runs on ESP32 1 = run on NANO 33 IoT (not working yet!!)
 
@@ -20,6 +20,8 @@ struct Storage {
 	char password[24] = "";           // WiFi network password
 	uint16_t timeoutRouter = 100;     // Time (seconds) to wait for WIFI access, after that own Access Point starts
 
+	uint8_t aogVersion = 8;			  // Version number for version check 4.2.01 = 4+2+1 = 7	
+
 	uint8_t DataTransVia = 1;         //transfer data via 0: USB, 1: WiFi, 4: USB 10 byte format for AOG V4
 
 	uint8_t output_type = 2;          //set to 1  if you want to use Stering Motor + Cytron MD30C Driver
@@ -27,6 +29,10 @@ struct Storage {
 								      //set to 3  if you want to use IBT 2  Driver + PWM 2-Coil Valve
 								      //set to 4  if you want to use  IBT 2  Driver + Danfoss Valve PVE A/H/M
 	uint16_t PWMOutFrequ = 20000;     //PWM frequency for motordriver: 1000Hz:for low heat at PWM device 20000Hz: not hearable
+
+	uint8_t	MotorDriveDirection = 0;  // 0 = normal, 1 = inverted
+
+	uint8_t MotorSlowDriveDegrees = 5;	  //How many degrees before decreasing Max PWM
 
 	uint8_t input_type = 2;           //0 = No ADS installed, Wheel Angle Sensor connected directly to ESP at GPIO 4 (attention 3,3V only)
 								                    //1 = Single Mode of ADS1115 - Sensor Signal at A0 (ADS)
@@ -36,31 +42,35 @@ struct Storage {
 
 	uint8_t InclinometerInstalled = 0;// set to 1 if MMA8452 is installed at address 1C (Adr PIN to GND) set to 2 at address 1D (Adr PIN open)
 
-	uint8_t UseMMA_X_Axis = 0;
+	uint8_t UseMMA_X_Axis = 1;		  // 1: use X axis (default) 0: use Y axis
 
 	uint8_t InvertRoll = 1;           // 0: no, set to 1 to change roll direction
+	byte roll_MAX_STEP = 20;
 
-	bool Invert_WAS = 0;              // set to 1 to Change Direction of Wheel Angle Sensor - to + 
+	uint8_t Invert_WAS = 0;              // set to 1 to Change Direction of Wheel Angle Sensor - to + 
 
 	uint8_t ShaftEncoder = 0;         // Steering Wheel ENCODER Installed
 	uint8_t pulseCountMax = 3;        // Switch off Autosteer after x Pulses from Steering wheel encoder 
 
 	uint16_t SteerPosZero = 10300;	  // first value for steer zero position ADS: 11000 for EPS32 AD PIN: 2048
 
-	uint8_t SteerRightMultiplyer = 100;//if values for left and right are the same: 100 
+	uint8_t AckermanFix = 78;		  //if values for left and right are the same: 100 
 
 	uint8_t SteerSwitch = 1;          //0 = enable = switch high (3,3V) //1 = enable = switch low(GND) //2 = toggle = button to low(GND)
 								      //3 = enable = button to high (3,3V), disable = button to low (GND), neutral = 1,65V
 
-	uint8_t SteerRemoteSwitch = 2;    //0 = not installed, 1 = switch to GND, 2 = use steer switch may not work, just a test
+	uint8_t SteerRemoteSwitch = 0;    //not supported by V4 0 = not installed, 1 = switch to GND, 2 = use steer switch may not work, just a test
 
 	uint8_t WorkSW_mode = 2;          // 0 = disabled   // 1 = digital ON/OFF // 2 = analog Value 0...4095 (0 - 3,3V)
 
 	uint8_t Invert_WorkSW = 0;        // 0 = Hitch raised -> High    // 1 = Hitch raised -> Low
 
-	uint8_t autoSteerMinSpeed = 3;    //AOG sends speed * 4 as byte so lowest is 1 = 0.25 km/h 2=0.5 3=0.75 4=1 km/h
+	uint8_t autoSteerMinSpeed4 = 2;    //AOG sends speed * 4 as byte so lowest is 1 = 0.25 km/h 2=0.5 3=0.75 4=1 km/h
 
-	uint16_t WorkSW_Threshold = 1450; // Value for analog hitch level to switch workswitch  (0-4096)
+	uint8_t autosteerMaxSpeed4 = 255;	// set to 255 to be able to drive backwards
+
+	uint16_t WorkSW_Threshold = 1500; // Value for analog hitch level to switch workswitch  (0-4096)
+
 	
 	// IO pins --------------------------------
 
@@ -90,7 +100,7 @@ struct Storage {
 	//### End of Setup Zone ####################################################################################
 	//##########################################################################################################
 	//set up the pgn for communication with AOG
-	uint8_t DataToAOGHeader[2] = { 0x7F,0xFD }, DataFromAOGHeader[2] = { 0x7F, 0xFE }, SettingsFromAOGHeader[2] = { 0x7F,0xFC };
+	uint8_t DataToAOGHeader[2] = { 0x7F,0xFD }, DataFromAOGHeader[2] = { 0x7F, 0xFE }, SettingsFromAOGHeader[2] = { 0x7F,0xFC }, ArdConfigFromAOGHeader[2] = { 0x7F,0xFB };
 	char ssid_ap[24] = "AG_Autosteer_ESP_Net";  //used if accesspoint is created, no password!!
 	uint8_t myip[4] = { 192, 168, 1, 77 };      // Autosteer module
 	uint8_t gwip[4] = { 192, 168, 1, 1 };       // Gateway & Accesspoint IP
@@ -110,9 +120,12 @@ struct Storage {
 	float Kp = 5.0f;    //proportional gain  
 	float Ki = 0.001f;  //integral gain
 	float Kd = 1.0f;    //derivative gain 
-	float steeringPositionZero = 13000;  uint8_t minPWMValue = 10;
+	float steeringPositionZero = 12540;  uint8_t minPWMValue = 30;
 	uint16_t maxIntegralValue = 20; //max PWM value for integral PID component
 	float steerSensorCounts = 100;  uint16_t roll_corr = 200;
+	float deadZone = 0.0f;  //band of no action
+	byte minPWM = 30;
+	byte maxPWM = 100;//max PWM value
 	
 	
 	boolean debugmode = false;
@@ -131,6 +144,8 @@ boolean EEPROM_clear = false;  //set to true when changing settings to write the
 #if HardwarePlatform == 0
 #include "EEPROM.h"
 #endif
+//#include <ESPmDNS.h>//OTA
+//#include <Update.h>
 #include "Wire.h"
 #include "BNO055_AOG.h"
 #include "zADS1015.h"
@@ -138,7 +153,6 @@ boolean EEPROM_clear = false;  //set to true when changing settings to write the
 #include <WiFiUdp.h>
 #include <WiFiServer.h>
 #include <WiFiClient.h>
-//#include <WiFiAP.h>
 #include <WiFi.h>
 
 #define A 0X28             //I2C address selection pin LOW BNO055
@@ -166,7 +180,7 @@ boolean LED_WIFI_ON = false;
 unsigned long DataFromAOGTime = 0;
 
 //loop time variables in microseconds
-const unsigned int LOOP_TIME = 100; //10hz 
+const unsigned int LOOP_TIME = 40; //25hz 
 unsigned int lastTime = LOOP_TIME;
 unsigned int currentTime = LOOP_TIME, remoteSwitchDelay = 0;
 byte watchdogTimer = 0;
@@ -178,7 +192,8 @@ const float varRoll = 0.1; // variance,
 const float varProcess = 0.001; //0,00025 smaller is more filtering
 
 //program flow
-bool isDataFound = false, isSettingFound = false, isMachineFound = false, steerSettingChanged = false;
+//bool webupdate = false;
+bool isDataFound = false, isSettingFound = false, isArdConfigFound = false, isMachineFound = false, steerSettingChanged = false;
 bool MMAinitialized = false;
 int AnalogValue = 0;
 bool steerEnable = false, toggleSteerEnable = false, SteerButtonPressed = false, steerEnableOld = false, remoteSwitchPressed = false;
@@ -195,14 +210,16 @@ float steerAngleError = 0; //setpoint - actual
 //float distanceError = 0; //
 int  pulseCount = 0, prevEncAState = 0, prevEncBState = 0; // Steering Wheel Encoder
 bool encDebounce = false; // Steering Wheel Encoder
+float corr = 0;
 
 //IMU, inclinometer variables
 bool imu_initialized = 0;
 int16_t roll = 0, heading = 0;
 uint16_t x_, y_, z_;
+float lastRoll = 0, diff = 0;
 
 //pwm variables
-int pwmDrive = 0, drive = 0, pwmDisplay = 0, pwmOut = 0;
+int pwmDrive = 0, drive = 0, pwmDisplay = 0, pwmOut = 0, errorAbs = 0, highLowPerDeg = 0;
 float pValue = 0;// iValue = 0, dValue = 0;
 
 //integral values - **** change as required *****
@@ -213,6 +230,7 @@ int maxIntegralValue = 20; //max PWM value for integral PID component
 byte toSend[] = { 0,0,0,0,0,0,0,0,0,0 };
 //data that will be received from server
 uint8_t DataFromAOG[10];
+
 
 
 
@@ -261,15 +279,19 @@ void setup() {
 		if (steerSet.DataTransVia == 4) { Serial.println("data transfer via USB 10 Byte sentence AOG V4"); }
 		else { Serial.println("data transfer via UDP"); }
 	}
+
 }
 
 // Main loop -----------------------------------------------------------------------------------------------
 
 
 void loop() {
+	
 	//runs allways (not in timed loop)	
 
-	doWebInterface();
+#if HardwarePlatform == 0 //ESP32
+	doWebInterface(); 
+#endif
 
 	WiFi_LED_blink();
 
@@ -290,6 +312,7 @@ void loop() {
 	{
 	case 0:
 		steerEnable = digitalRead(steerSet.STEERSW_PIN);
+		steerSwitch = steerEnable;
 		if (steerEnableOld != steerEnable) {
 			if (steerSet.debugmode) {
 				if (steerEnable) { Serial.println("Autosteer ON by Switch"); }
@@ -300,6 +323,7 @@ void loop() {
 		break;
 	case 1:
 		steerEnable = !digitalRead(steerSet.STEERSW_PIN);
+		steerSwitch = steerEnable;
 		if (steerEnableOld != steerEnable) {
 			if (steerSet.debugmode) {
 				if (steerEnable) { Serial.println("Autosteer ON by Switch"); }
@@ -317,6 +341,7 @@ void loop() {
 			if (steerSet.debugmode) { Serial.println("Steer-Break: IRQ occured? Button pressed?"); }
 			toggleSteerEnable = false;
 		}
+		steerSwitch = steerEnable;
 		break;
 	case 3:
 		byte tempvalue = analogRead(steerSet.STEERSW_PIN);
@@ -329,18 +354,20 @@ void loop() {
 			}
 			steerEnableOld = steerEnable;
 		}
+		steerSwitch = steerEnable;
 		break;
 	}
 
 	//valid conditions to turn on autosteer?
 	if (steerEnable) {//steerEnable was set by switch so now check if really can turn on
 		//auto Steer is off if 32020,Speed is too slow, encoder pulses 
-		if ((int(distanceFromLine) == 32020) || (gpsSpeed < (float(steerSet.autoSteerMinSpeed) / 4))
+		if ((int(distanceFromLine) == 32020) || (int(distanceFromLine) == 32000) ||
+			(gpsSpeed < (float(steerSet.autoSteerMinSpeed4) * 0.25)) || (gpsSpeed > (float(steerSet.autosteerMaxSpeed4) * 0.25))
 			|| (pulseCount >= steerSet.pulseCountMax))
 		{
 			steerEnable = false;
 			if (steerEnable != steerEnableOld) {
-				Serial.println("Steer-Break:  AOG not active or Speed too low or Steering Wheel Encoder..");
+				Serial.println(" Steer-Break:  AOG not active or Speed too low or Steering Wheel Encoder..");
 				steerEnableOld = steerEnable;
 			}
 	
@@ -357,6 +384,7 @@ void loop() {
 	{
 		digitalWrite(steerSet.AutosteerLED_PIN, HIGH);  //turn LED on (LED connected to MotorDriver = ON = Motor moves)
 		steerAngleError = steerAngleActual - steerAngleSetPoint;   //calculate the steering error 
+		//if (abs(steerAngleError) < steerSet.deadZone) steerAngleError = 0;
 
 		calcSteeringPID();   //do the pid     
 		motorDrive();       //out to motors the pwm value 
@@ -381,7 +409,7 @@ void loop() {
 	SetRelays(); //turn on off sections
 
 //timed loop
-	//* Loop triggers every 100 msec and sends back gyro heading, and roll, steer angle etc
+	//* Loop triggers every 40 msec and sends back gyro heading, and roll, steer angle etc
 	currentTime = millis();
 
 	if (currentTime - lastTime >= LOOP_TIME)
@@ -391,7 +419,7 @@ void loop() {
 		encDebounce = LOW; //reset steerEncoder debounce
 
 		//If connection lost to AgOpenGPS, the watchdog will count up and turn off steering
-		if (watchdogTimer++ > 250) watchdogTimer = 20;
+		if (watchdogTimer++ > 250) watchdogTimer = 100;
 
 		if (steerSet.BNOInstalled == 1) {   // Initialize the BNO055 if not done
 			IMU.readIMU();
@@ -405,13 +433,30 @@ void loop() {
 				{
 					MMA1C.getRawData(&x_, &y_, &z_);
 
-					if (steerSet.UseMMA_X_Axis)
+					if (steerSet.UseMMA_X_Axis==1)
 						roll = x_; //Conversion uint to int
 					else roll = y_;
 
 					if (roll > 4200)  roll = 4200;
 					if (roll < -4200) roll = -4200;
-					rollK = map(roll, -4200, 4200, -960, 960); //16 counts per degree (good for 0 - +/-30 degrees) 
+					//rollK = map(roll, -4200, 4200, -960, 960); //16 counts per degree (good for 0 - +/-30 degrees) 
+					roll = roll >> 3;  //divide by 8  +-525
+
+					// limit the differential  
+					diff = roll - lastRoll;
+					if (diff > steerSet.roll_MAX_STEP) roll = lastRoll + steerSet.roll_MAX_STEP;
+					else if (diff < -steerSet.roll_MAX_STEP) roll = lastRoll - steerSet.roll_MAX_STEP;
+					lastRoll = roll;
+
+					//divide by 2 -268 to +268    -17 to +17 degrees
+					roll = roll >> 1;
+
+					//if not positive when rolling to the right
+					if (steerSet.InvertRoll)
+						roll *= -1.0;
+
+					//divide by 16
+					rollK = roll;				
 				}
 			}
 
@@ -422,19 +467,33 @@ void loop() {
 				{
 					MMA1D.getRawData(&x_, &y_, &z_);
 
-					if (steerSet.UseMMA_X_Axis)
+					if (steerSet.UseMMA_X_Axis==1)
 						roll = x_; //Conversion uint to int
 					else roll = y_;
 
 					if (roll > 4200)  roll = 4200;
 					if (roll < -4200) roll = -4200;
-					rollK = map(roll, -4200, 4200, -960, 960); //16 counts per degree (good for 0 - +/-30 degrees) 
+					//rollK = map(roll, -4200, 4200, -960, 960); //16 counts per degree (good for 0 - +/-30 degrees) 
+					roll = roll >> 3;  //divide by 8  +-525
+
+					// limit the differential  
+					diff = roll - lastRoll;
+					if (diff > steerSet.roll_MAX_STEP) roll = lastRoll + steerSet.roll_MAX_STEP;
+					else if (diff < -steerSet.roll_MAX_STEP) roll = lastRoll - steerSet.roll_MAX_STEP;
+					lastRoll = roll;
+
+					//divide by 2 -268 to +268    -17 to +17 degrees
+					roll = roll >> 1;
+
+					//if not positive when rolling to the right
+					if (steerSet.InvertRoll)
+						roll *= -1.0;
+
+					//divide by 16
+					rollK = roll;
 				}
 			}
 
-
-			//if not positive when rolling to the right
-			if (steerSet.InvertRoll) { rollK *= -1.0; }
 
 			//Kalman filter input: rollK
 			Pc = P + varProcess;
@@ -506,11 +565,9 @@ void loop() {
 		}
 
 		switchByte = 0;
-		remoteSwitch = remoteSwitch << 2; //put remote in bit 2
-		steerSwitch = steerEnable;  //digitalRead(STEERSW_PIN); //read auto steer enable switch open = 0n closed = Off
-		steerSwitch <<= 1; //put steerswitch status in bit 1 position
-		switchByte = remoteSwitch | workSwitch | steerSwitch;
-
+		switchByte |= (remoteSwitch << 2); //put remote in bit 2
+		switchByte |= (!steerSwitch << 1);   //put steerswitch status in bit 1 position
+		switchByte |= workSwitch;
 
 	//steering position and steer angle
 		switch (steerSet.input_type) {
@@ -537,18 +594,17 @@ void loop() {
 		steeringPosition = (steeringPosition - steerSet.steeringPositionZero);   //center the steering position sensor  
 
 		//invert position, left must be minus
-		if (steerSet.Invert_WAS) steeringPosition *= -1;
+		if (steerSet.Invert_WAS == 1) steeringPosition *= -1;
 
 		//correct non linear values = right side factor
 		if (steeringPosition > 0) {
-			steeringPosition = long((steeringPosition * steerSet.SteerRightMultiplyer) / 100);}
+			steeringPosition = long((steeringPosition * steerSet.AckermanFix) / 100);}
 
 		//convert position to steer angle
 		steerAngleActual = (float)(steeringPosition) / steerSet.steerSensorCounts;
 
 		// add the roll
-		if (steerSet.InclinometerInstalled >= 1) steerAngleActual = steerAngleActual - (XeRoll * (steerSet.Kd / 800));     
-
+		//if (steerSet.InclinometerInstalled >= 1) steerAngleActual = steerAngleActual - (XeRoll * (steerSet.Kd / 800));     
 
 //Build Autosteer Packet: Send to agopenGPS **** you must send 10 Byte or 5 Int
 		int temp;
@@ -564,17 +620,25 @@ void loop() {
 			heading = (int)IMU.euler.head;     //heading in degrees * 16 from BNO
 			temp = heading;
 		}
-		else { temp = 9999; }                   //No IMU installed
+		else { temp = 0; }                   //No IMU installed
 		toSend[4] = (byte)(temp >> 8);
 		toSend[5] = (byte)(temp);
 
 		//Vehicle roll --- * 16 in degrees
+		if (steerSet.InclinometerInstalled > 0) {
+			temp = (int)XeRoll;
+		}  
+		else { temp = 0; }                //no Dogs installed
 		temp = XeRoll;
 		toSend[6] = (byte)(temp >> 8);
 		toSend[7] = (byte)(temp);
 
 		//switch byte
 		toSend[8] = switchByte;
+
+		//pwm value
+		if (pwmDisplay < 0) pwmDisplay *= -1;
+		toSend[9] = pwmDisplay;
 
 		//Build Autosteer Packet completed
 		//send packet
@@ -595,12 +659,14 @@ void loop() {
 			Serial.print(int(XeRoll*100)); Serial.print(",");
 			//switch byte
 			Serial.print(toSend[8]);
+			if (steerSet.aogVersion > 0) { Serial.print(","); Serial.print(toSend[9]); }
 			Serial.println();
 		}
+
 		else { Send_UDP(); delay(2); }//transmit to AOG
 
 		if (steerSet.debugmode) {
-			Serial.println("Data to AOG: steerangle, steerangleSetPoint, IMU heading, roll, switchByte,");
+			Serial.println("Data to AOG: steerangle, steerangleSetPoint, IMU heading, roll, switchByte, PWM");
 			Serial.print(steerAngleActual); //The actual steering angle in degrees
 			Serial.print(",");
 			Serial.print(steerAngleSetPoint);
@@ -609,7 +675,9 @@ void loop() {
 			Serial.print(",");
 			Serial.print(XeRoll);   
 			Serial.print(",");
-			Serial.println(switchByte); 
+			Serial.print(switchByte); 
+			Serial.print(",");
+			Serial.println(pwmDisplay);
 		}
 	}  //end of timed loop
 }

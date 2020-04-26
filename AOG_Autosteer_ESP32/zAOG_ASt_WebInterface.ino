@@ -1,10 +1,13 @@
 
-//---------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 // definitions and variables for webinterface
 #define MAX_PACKAGE_SIZE 2048
 char HTML_String[20000];
+const char* host = "192.168.2.77";// "esp32";
+bool firmwareUpdFileSel = false;
 char HTTP_Header[150];
 int Aufruf_Zaehler = 0;
+
 
 #define ACTION_SET_SSID        1  
 #define ACTION_SET_OUTPUT_TYPE 2  // also adress at EEPROM
@@ -22,6 +25,7 @@ int Aufruf_Zaehler = 0;
 #define ACTION_SET_DataTransfVia 14
 #define ACTION_SET_debugmode   15
 #define ACTION_SET_MinSpeed	   16
+#define ACTION_SET_AOGVer	   17
 
 int action;
 
@@ -54,8 +58,8 @@ char encoder_type_tab[2][11] = { "None", "Installed" };
 
 char tmp_string[20];
 
-//---------------------------------------------------------------------
-// 11. Maerz 2020
+//-------------------------------------------------------------------------------------------------
+// 26. April 2020
 
 void doWebInterface() {
 
@@ -96,23 +100,30 @@ void doWebInterface() {
 				  // that's the end of the client HTTP request, so send a response:
 					if (currentLine.length() == 0) {
 
-						make_HTML01();  // create Page array
-					   //---------------------------------------------------------------------
-					   // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-					   // and a content-type so the client knows what's coming, then a blank line:
-						strcpy(HTTP_Header, "HTTP/1.1 200 OK\r\n");
-						strcat(HTTP_Header, "Content-Length: ");
-						strcati(HTTP_Header, strlen(HTML_String));
-						strcat(HTTP_Header, "\r\n");
-						strcat(HTTP_Header, "Content-Type: text/html\r\n");
-						strcat(HTTP_Header, "Connection: close\r\n");
-						strcat(HTTP_Header, "\r\n");
+						if (firmwareUpdFileSel) {
+							Serial.println("firmwareupdate page");
+							client_page.print(serverIndex);
+							Serial.println("root");
+						}
+						else {
+							make_HTML01();   // create Page array
+						   //---------------------------------------------------------------------
+						   // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
+						   // and a content-type so the client knows what's coming, then a blank line:
+							strcpy(HTTP_Header, "HTTP/1.1 200 OK\r\n");
+							strcat(HTTP_Header, "Content-Length: ");
+							strcati(HTTP_Header, strlen(HTML_String));
+							strcat(HTTP_Header, "\r\n");
+							strcat(HTTP_Header, "Content-Type: text/html\r\n");
+							strcat(HTTP_Header, "Connection: close\r\n");
+							strcat(HTTP_Header, "\r\n");
 
-						client_page.print(HTTP_Header);
-						delay(20);
-						send_HTML();
-						// break out of the while loop:
-						break;
+							client_page.print(HTTP_Header);
+							delay(20);
+							send_HTML();
+							// break out of the while loop:
+							break;
+						}
 					}
 					else {    // if you got a newline, then clear currentLine:
 						currentLine = "";
@@ -145,16 +156,21 @@ void doWebInterface() {
 //---------------------------------------------------------------------
 // Process given values
 //---------------------------------------------------------------------
-void process_Request()
+void process_Request()  //OTA
 {
 	int myIndex;
 
+	if (Find_Start("/serverIndex", HTML_String) > 0) {
+		Serial.println(); Serial.println("firmwareupdater detected");
+		firmwareUpdFileSel = true;
+	}
 	if (Find_Start("/?", HTML_String) < 0 && Find_Start("GET / HTTP", HTML_String) < 0)
 	{
 		//nothing to process
 		return;
 	}
-
+	firmwareUpdFileSel = false;
+	Serial.println("request seen");
 	action = Pick_Parameter_Zahl("ACTION=", HTML_String);
 
 	if (action != ACTION_SET_RESTART) { EEprom_unblock_restart(); }
@@ -181,8 +197,14 @@ void process_Request()
 		EEprom_write_all();
 	}
 
+	if (action == ACTION_SET_AOGVer) {
+		int tempint = Pick_Parameter_Zahl("aogVer=", HTML_String);
+		if ((tempint >= 0) && (tempint <= 255)) { steerSet.aogVersion = tempint; }
+		EEprom_write_all();
+	}
+
 	if (action == ACTION_SET_DataTransfVia) {
-		//int temp = Pick_Parameter_Zahl("AOGNTRIP=", HTML_String);
+		//int temp = Pick_Parameter_Zahl("AOGNTRIP=", URI_answ_char);
 		if (Pick_Parameter_Zahl("DataTransfVia=", HTML_String) == 0) steerSet.DataTransVia = 0;
 		if (Pick_Parameter_Zahl("DataTransfVia=", HTML_String) == 1) steerSet.DataTransVia = 1;
 		if (Pick_Parameter_Zahl("DataTransfVia=", HTML_String) == 4) steerSet.DataTransVia = 4;
@@ -192,13 +214,15 @@ void process_Request()
 	if (action == ACTION_SET_OUTPUT_TYPE) {
 		steerSet.output_type = Pick_Parameter_Zahl("OUTPUT_TYPE=", HTML_String);
 		int tempint = Pick_Parameter_Zahl("PWMFreq=", HTML_String);
-		if ((tempint <= 20000) && (tempint >= 500)) { steerSet.PWMOutFrequ = tempint; }
+		if ((tempint <= 20000) && (tempint >= 20)) { steerSet.PWMOutFrequ = tempint; }
+		tempint = Pick_Parameter_Zahl("MotSlow=", HTML_String);
+		if ((tempint <= 20) && (tempint >= 1)) { steerSet.MotorSlowDriveDegrees = tempint; }
 		EEprom_write_all();
 	}
 
 	if (action == ACTION_SET_WAS_TYPE) {
 		steerSet.input_type = Pick_Parameter_Zahl("INPUT_TYPE=", HTML_String);
-		steerSet.SteerRightMultiplyer = Pick_Parameter_Zahl("rightMul=", HTML_String);
+		steerSet.AckermanFix = Pick_Parameter_Zahl("rightMul=", HTML_String);
 		byte tempby = Pick_Parameter_Zahl("invWAS=", HTML_String);
 		if (tempby == 1) {
 			steerSet.Invert_WAS = tempby;
@@ -212,12 +236,6 @@ void process_Request()
 		steerSet.steeringPositionZero = actualSteerPos;
 		EEprom_write_all();
 	}
-	/*
-		if (action == ACTION_SET_WAS_INVERT) {
-			steerSet.Invert_WAS = Pick_Parameter_Zahl("WAS_INVERT=", HTML_String);
-			EEprom_write_all();
-		}
-	*/
 	if (action == ACTION_SET_IMU_TYPE)
 	{
 		steerSet.BNOInstalled = Pick_Parameter_Zahl("IMU_TYPE=", HTML_String);
@@ -259,6 +277,13 @@ void process_Request()
 			steerSet.InvertRoll = tempby;
 		}
 		else { steerSet.InvertRoll = 0; }//no value back from page = 0
+		if (Pick_Parameter_Zahl("MMAAxis=", HTML_String) == 1) steerSet.UseMMA_X_Axis = 1;
+		if (Pick_Parameter_Zahl("MMAAxis=", HTML_String) == 0) steerSet.UseMMA_X_Axis = 0;
+		
+		tempby = Pick_Parameter_Zahl("rollMaxChan=", HTML_String);
+		if ((tempby >= 1) && (tempby <= 50)) {
+			steerSet.roll_MAX_STEP = tempby;
+		}
 		EEprom_write_all();
 	}
 
@@ -295,7 +320,12 @@ void process_Request()
 		EEprom_write_all();
 	}
 	if (action == ACTION_SET_MinSpeed) {
-		steerSet.autoSteerMinSpeed = Pick_Parameter_Zahl("MinSpeed=", HTML_String);
+		steerSet.autoSteerMinSpeed4 = Pick_Parameter_Zahl("MinSpeed=", HTML_String);
+		byte tempby = Pick_Parameter_Zahl("MaxSpeed=", HTML_String);
+		if ((tempby >= 10) && (tempby <= 65)) {
+			if (tempby == 64) { steerSet.autosteerMaxSpeed4 = 255; }
+			else { steerSet.autosteerMaxSpeed4 = tempby * 4; }
+		}
 		EEprom_write_all();
 	}
 	if (action == ACTION_SET_debugmode)
@@ -347,7 +377,7 @@ void make_HTML01() {
 	strcat(HTML_String, "<font color=\"#000000\" face=\"VERDANA,ARIAL,HELVETICA\">");
 	strcat(HTML_String, "<h1>AG Autosteer ESP config page</h1>");
 	strcat(HTML_String, "by WEder/coffeetrac and MTZ8302<br>");
-	strcat(HTML_String, "ver 4.00 11. Mrz. 2020<br><br><hr>");
+	strcat(HTML_String, "ver 4.2.2  26. Apr. 2020<br><br><hr>");
 
 	//---------------------------------------------------------------------------------------------  
 	//load values of INO setup zone
@@ -410,6 +440,30 @@ void make_HTML01() {
 	strcat(HTML_String, "<td><button style= \"width:120px\" name=\"ACTION\" value=\"");
 	strcati(HTML_String, ACTION_SET_RESTART);
 	strcat(HTML_String, "\">Restart</button></td>");
+	strcat(HTML_String, "</tr>");
+
+	strcat(HTML_String, "</table>");
+	strcat(HTML_String, "</form>");
+	strcat(HTML_String, "<br><hr>");
+
+	//-----------------------------------------------------------------------------------------
+// AOG Version
+
+	strcat(HTML_String, "<h2>AOG Version number</h2>");
+	strcat(HTML_String, "<form>");
+	strcat(HTML_String, "<b>If version number send by autosteer doesn't fit to AOG, AOG won't start.</b><br>");
+	strcat(HTML_String, "AOG 4.2.01 = 4 + 2 +1 = 7<br><br><table>");
+	set_colgroup(250, 300, 150, 0, 0);
+
+	strcat(HTML_String, "<tr>");
+	strcat(HTML_String, "<td colspan=\"3\">for 4.1 and before set 0</td></tr>");
+	strcat(HTML_String, "<tr><td><b>AOG Version code</b></td><td><input type = \"number\"  name = \"aogVer\" min = \"0\" max = \"255\" step = \"1\" style= \"width:200px\" value = \"");// placeholder = \"");
+	strcati(HTML_String, steerSet.aogVersion);
+	strcat(HTML_String, "\"></td>");
+
+	strcat(HTML_String, "<td><button style= \"width:120px\" name=\"ACTION\" value=\"");
+	strcati(HTML_String, ACTION_SET_AOGVer);
+	strcat(HTML_String, "\">Apply and Save</button></td>");
 	strcat(HTML_String, "</tr>");
 
 	strcat(HTML_String, "</table>");
@@ -632,11 +686,13 @@ void make_HTML01() {
 			strcat(HTML_String, "</tr>");
 		}
 	}
+
+	//PWM frequency + Motor slow drive range
 	if (steerSet.output_type > 0) {
 		strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
 		strcat(HTML_String, "<tr>");
 		strcat(HTML_String, "<td><b>PWM output frequency</b></td>");
-		strcat(HTML_String, "<td><input type = \"number\"  name = \"PWMFreq\" min = \"500\" max = \"20000\" step = \"50\" style= \"width:200px\" value = \"");// placeholder = \"");
+		strcat(HTML_String, "<td><input type = \"number\"  name = \"PWMFreq\" min = \"20\" max = \"20000\" step = \"10\" style= \"width:200px\" value = \"");// placeholder = \"");
 		strcati(HTML_String, steerSet.PWMOutFrequ);
 		strcat(HTML_String, "\"></td>");
 		strcat(HTML_String, "<td><button style= \"width:120px\" name=\"ACTION\" value=\"");
@@ -646,6 +702,21 @@ void make_HTML01() {
 		strcat(HTML_String, "</tr>");
 		strcat(HTML_String, "<td colspan=\"3\">1000 Hz for low heat at PWM device</td></tr>");
 		strcat(HTML_String, "<td colspan=\"3\">20000 Hz not hearable</td></tr>");
+
+		strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
+		strcat(HTML_String, "<tr>");
+		strcat(HTML_String, "<td colspan=\"3\"><b>Motor/Valve is driving slower if steer angle error is less then x degrees:</b></td></tr>");
+		strcat(HTML_String, "<td>slow drive range (degr):</td>");
+		strcat(HTML_String, "<td><input type = \"number\"  name = \"MotSlow\" min = \"1\" max = \"10\" step = \"1\" style= \"width:200px\" value = \"");// placeholder = \"");
+		strcati(HTML_String, steerSet.MotorSlowDriveDegrees);
+		strcat(HTML_String, "\"></td>");
+		strcat(HTML_String, "<td><button style= \"width:120px\" name=\"ACTION\" value=\"");
+		strcati(HTML_String, ACTION_SET_OUTPUT_TYPE);
+		strcat(HTML_String, "\">Apply and Save</button></td>");
+		strcat(HTML_String, "</tr>");
+		strcat(HTML_String, "</tr>");
+
+
 	}
 	strcat(HTML_String, "</table>");
 	strcat(HTML_String, "</form>");
@@ -703,9 +774,9 @@ void make_HTML01() {
 	strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
 
 	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td><b>right side correction factor (%)</b></td>");
+	strcat(HTML_String, "<td><b>Ackerman fix factor (%)</b></td>");
 	strcat(HTML_String, "<td><input type = \"number\"  name = \"rightMul\" min = \"35\" max = \"300\" step = \"1\" style= \"width:120px\" value = \"");// placeholder = \"");
-	strcati(HTML_String, steerSet.SteerRightMultiplyer);
+	strcati(HTML_String, steerSet.AckermanFix);
 	strcat(HTML_String, "\"></td>");
 	strcat(HTML_String, "<td><button style= \"width:120px\" name=\"ACTION\" value=\"");
 	strcati(HTML_String, ACTION_SET_WAS_TYPE);
@@ -736,7 +807,7 @@ void make_HTML01() {
 
 	//-----------------------------------------------------------------------------------------
 	// min speed selction
-	strcat(HTML_String, "<h2>Minimum speed for using autosteer</h2>");
+	strcat(HTML_String, "<h2>Speed range for using autosteer</h2>");
 	strcat(HTML_String, "<form>");
 	strcat(HTML_String, "<table>");
 	set_colgroup(300, 250, 150, 0, 0);
@@ -749,7 +820,7 @@ void make_HTML01() {
 		strcat(HTML_String, "\" value=\"");
 		strcati(HTML_String, i);
 		strcat(HTML_String, "\"");
-		if (steerSet.autoSteerMinSpeed == i)strcat(HTML_String, " CHECKED");
+		if (steerSet.autoSteerMinSpeed4 == i)strcat(HTML_String, " CHECKED");
 		strcat(HTML_String, "><label for=\"JZ");
 		strcati(HTML_String, i);
 		strcat(HTML_String, "\"> ");
@@ -764,10 +835,16 @@ void make_HTML01() {
 		}
 		strcat(HTML_String, "</tr>");
 	}
+	//max speed
+	strcat(HTML_String, "<tr>");
+	strcat(HTML_String, "<td colspan=\"3\">&nbsp;</td></tr>");
+	strcat(HTML_String, "<tr><td colspan=\"3\">Set to 64 if you whant to use autosteer backwards, but this is NOT SAVE!!</td></tr>");
+	strcat(HTML_String, "<tr><td><b>max speed (km/h)</b></td><td><input type = \"number\"  name = \"MaxSpeed\" min = \"10\" max = \"64\" step = \"1\" style= \"width:200px\" value = \"");// placeholder = \"");
+	strcati(HTML_String, int((steerSet.autosteerMaxSpeed4 * 0.25) + 0.3));
+	strcat(HTML_String, "\"></td>");
 	strcat(HTML_String, "</table>");
 	strcat(HTML_String, "</form>");
 	strcat(HTML_String, "<br><hr>");
-
 
 	//-----------------------------------------------------------------------------------------
 	// Inclinometer
@@ -829,6 +906,31 @@ void make_HTML01() {
 	strcat(HTML_String, "<td><button style= \"width:120px\" name=\"ACTION\" value=\"");
 	strcati(HTML_String, ACTION_SET_INCLINO);
 	strcat(HTML_String, "\">Apply and Save</button></td></tr>");
+
+	// radio button use x/y axis
+	strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
+	strcat(HTML_String, "<tr> <td colspan=\"3\"><b>MMA orientation:</b></td> </tr>");
+	strcat(HTML_String, "<tr>");
+	strcat(HTML_String, "<td>MMA uses</td><td><input type = \"radio\" name=\"MMAAxis\" id=\"JZ\" value=\"1\"");
+	if (steerSet.UseMMA_X_Axis == 1)strcat(HTML_String, " CHECKED");
+	strcat(HTML_String, "><label for=\"JZ\">X axis (default)</label></td>");
+	strcat(HTML_String, "<td><button style= \"width:120px\" name=\"ACTION\" value=\"");
+	strcati(HTML_String, ACTION_SET_INCLINO);
+	strcat(HTML_String, "\">Apply and Save</button></td>");
+	strcat(HTML_String, "</tr>");
+
+	strcat(HTML_String, "<tr>");
+	strcat(HTML_String, "<td></td><td><input type = \"radio\" name=\"MMAAxis\" id=\"JZ\" value=\"0\"");
+	if (steerSet.UseMMA_X_Axis == 0)strcat(HTML_String, " CHECKED");
+	strcat(HTML_String, "><label for=\"JZ\">Y axis</label></td></tr>");
+
+	//roll max change
+	strcat(HTML_String, "<tr>");
+	strcat(HTML_String, "<td colspan=\"3\">&nbsp;</td></tr>");
+	strcat(HTML_String, "<tr><td><b>MMA Filter setting:</b></td></tr>");
+	strcat(HTML_String, "<tr><td>maximum roll change per 100ms:</td><td><input type = \"number\"  name = \"rollMaxChan\" min = \"1\" max = \"40\" step = \"1\" style= \"width:200px\" value = \"");// placeholder = \"");
+	strcati(HTML_String, steerSet.roll_MAX_STEP);
+	strcat(HTML_String, "\"></td></tr>");
 
 	strcat(HTML_String, "</table>");
 	strcat(HTML_String, "</form>");
@@ -902,7 +1004,34 @@ void make_HTML01() {
 	strcat(HTML_String, "</table>");
 	strcat(HTML_String, "</form>");
 	strcat(HTML_String, "<br><hr>");
+/*
+//-------------------------------------------------------------
+// firmware update
+	strcat(HTML_String, "<h2>Firmware Update for ESP32</h2>");
+	strcat(HTML_String, "<form>");
+	strcat(HTML_String, "<table>");
+	set_colgroup(300, 250, 150, 0, 0);
 
+	strcat(HTML_String, "<tr> <td colspan=\"3\">build a new firmware with Arduino IDE selecting</td> </tr>");
+	strcat(HTML_String, "<tr> <td colspan=\"3\">Sketch -> Export compiled Binary</td> </tr>");
+	strcat(HTML_String, "<tr> <td colspan=\"3\">upload this file via WiFi/Ethernet connection</td> </tr>");
+	
+	strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
+	strcat(HTML_String, "<tr><td></td>");
+
+	strcat(HTML_String, "<td><input type='submit' onclick='openUpload(this.form)' value='Open Firmware uploader'></td></tr>");
+		
+	strcat(HTML_String,"<script>" );
+	strcat(HTML_String,"function openUpload(form)" );
+	strcat(HTML_String, "{");
+	strcat(HTML_String,"window.open('/serverIndex')" );
+	strcat(HTML_String, "}");
+	strcat(HTML_String,"</script>" );
+	
+	strcat(HTML_String, "</table>");
+	strcat(HTML_String, "</form>");
+	strcat(HTML_String, "<br><hr>");
+*/
 	//-------------------------------------------------------------  
 	strcat(HTML_String, "</font>");
 	strcat(HTML_String, "</font>");
@@ -911,6 +1040,7 @@ void make_HTML01() {
 }
 
 //--------------------------------------------------------------------------
+
 void send_not_found() {
 
 	Serial.println("Send Not Found");
@@ -956,7 +1086,8 @@ void send_HTML() {
 	//client.stop();
 }
 
-//----------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
+
 void set_colgroup(int w1, int w2, int w3, int w4, int w5) {
 	strcat(HTML_String, "<colgroup>");
 	set_colgroup1(w1);
