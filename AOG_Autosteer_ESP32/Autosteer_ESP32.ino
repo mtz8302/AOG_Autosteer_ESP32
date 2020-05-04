@@ -20,7 +20,7 @@ struct Storage {
 	char password[24] = "";           // WiFi network password
 	uint16_t timeoutRouter = 100;     // Time (seconds) to wait for WIFI access, after that own Access Point starts
 
-	uint8_t aogVersion = 8;			  // Version number for version check 4.2.01 = 4+2+1 = 7	
+	uint8_t aogVersion = 17;	  // Version number for version check 4.2.01 = 4+2+1 = 7	
 
 	uint8_t DataTransVia = 1;         //transfer data via 0: USB, 1: WiFi, 4: USB 10 byte format for AOG V4
 
