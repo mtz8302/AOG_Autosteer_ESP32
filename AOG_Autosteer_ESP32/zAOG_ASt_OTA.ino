@@ -1,6 +1,6 @@
 //-------------------------------------------------------------------------------------------------
 // Login page
-
+/*
 const char* loginIndex =
 "<form name='loginForm'>"
 "<table width='20%' bgcolor='A09F9F' align='center'>"
@@ -44,7 +44,7 @@ const char* loginIndex =
 "}"
 "</script>";
 
-
+*/
 
 //-------------------------------------------------------------------------------------------------
 // Server Index Page 
@@ -96,6 +96,3 @@ const char* serverIndex =
 "});"
 "});"
 "</script>";
-
-
-

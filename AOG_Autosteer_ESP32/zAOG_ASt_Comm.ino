@@ -10,7 +10,7 @@ void getDataFromAOG()
 
 	//get new AOG Data
 	//USB
-	if ((steerSet.DataTransVia == 0) || (steerSet.DataTransVia == 4)) {		
+	if (steerSet.DataTransVia < 5) {		
 
 		while (Serial.available())
 		{
@@ -57,7 +57,7 @@ void getDataFromAOG()
 
 
 	//WiFi UDP 
-	if ((steerSet.DataTransVia == 1))
+	else
 	{
 		//Serial.println("checking for UDP packet");
 		isDataFound = false;
@@ -106,7 +106,6 @@ void getDataFromAOG()
 		gpsSpeed = float(DataFromAOG[3]) / 4;  //actual speed times 4, single byte
 
 		//distance from the guidance line in mm
-		olddist = distanceFromLine;
 		idistanceFromLine = (DataFromAOG[4] << 8 | DataFromAOG[5]);   //high,low bytes     
 		distanceFromLine = (float)idistanceFromLine;
 
@@ -226,13 +225,13 @@ void SendTwoThirty(byte check)
 	toSend[9] = 0;
 
 	//off to AOG
-	if (steerSet.DataTransVia == 4) {
+	if (steerSet.DataTransVia < 5) {
 		for (byte n = 0; n < 9; n++) {
 			Serial.print(toSend[n]); Serial.print(",");
 		}
 		Serial.println(toSend[9]);//drop , after byte 9
 	}
-	else {	if (steerSet.DataTransVia == 1) { Send_UDP(); }	}
+	else {	 Send_UDP(); 	}
 
 	//back to sending steerData pgn
 	toSend[0] = steerSet.DataToAOGHeader[0];//0x7F;
