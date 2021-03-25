@@ -166,14 +166,14 @@ void process_Request()
 				Set.aogVersion = byte(argVal);
 				//write PGN to output sentence	
 				if (Set.aogVersion == 17) {
-					steerToAOG[0] = AOGSentenceHeader[2];
+					steerToAOG[0] = FromAOGSentenceHeader[2];
 					steerToAOG[1] = steerDataToAOGHeader;  //same PGN as V4.6 or higher
 					DataToAOGLength = steerDataSentenceToAOGLengthV17;
 				}
 				else {
-					steerToAOG[0] = AOGSentenceHeader[0];   //0x80
-					steerToAOG[1] = AOGSentenceHeader[1];   //0x81
-					steerToAOG[2] = AOGSentenceHeader[2];   //0x7F
+					steerToAOG[0] = FromAOGSentenceHeader[0];   //0x80
+					steerToAOG[1] = FromAOGSentenceHeader[1];   //0x81
+					steerToAOG[2] = FromAOGSentenceHeader[2];   //0x7F
 					steerToAOG[3] = steerDataToAOGHeader;
 					steerToAOG[4] = steerDataSentenceToAOGLength - 6; //length of data = all - header - length - CRC
 					DataToAOGLength = steerDataSentenceToAOGLength;

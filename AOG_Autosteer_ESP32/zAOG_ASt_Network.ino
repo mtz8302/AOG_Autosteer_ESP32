@@ -11,6 +11,8 @@ void WiFi_handle_connection(void* pvParameters) {
         else {
             vTaskDelay(500);//do every half second
 
+            now = millis();
+
             IPAddress gwIP, myIP;
 
             if (Set.debugmode) { Serial.print("WiFi_connect_step: "); Serial.println(WiFi_connect_step); }
@@ -37,15 +39,10 @@ void WiFi_handle_connection(void* pvParameters) {
                         WiFi_network_search_timeout = 0;//reset timer
                     }
                 }
-                WiFi_connect_timer = millis();
                 break;
                 //start WiFi connection
             case 11:
-#if HardwarePlatform == 0  //ESP32 
-                WiFi.mode(WIFI_STA);   //  Workstation  
-                WiFi_connect_timer = now;
-#endif
-
+                WiFi.mode(WIFI_STA);   //  Workstation 
                 WiFi_connect_step++;
                 break;
             case 12:
@@ -54,12 +51,10 @@ void WiFi_handle_connection(void* pvParameters) {
                 }
                 WiFi_STA_connect_network();
                 WiFi_connect_step++;
-                WiFi_connect_timer = now;
                 break;
             case 13:
                 if (WiFi.status() != WL_CONNECTED) {
                     Serial.print(".");
-                    WiFi_connect_timer = now - 200;//check faster
                     if (now > WiFi_network_search_timeout) {
                         //timeout
                         WiFi_STA_connect_call_nr++;
@@ -71,7 +66,6 @@ void WiFi_handle_connection(void* pvParameters) {
                     //connected
                     WiFi_connect_step++;
                     WiFi_network_search_timeout = 0;//reset timer
-                    WiFi_connect_timer = now + 700;//wait longer to get correct IP
                 }
                 break;
                 //change IP / DHCP
@@ -87,14 +81,8 @@ void WiFi_handle_connection(void* pvParameters) {
                 Serial.print("changing IP to: ");
                 Serial.println(myIP);
                 gwIP = WiFi.gatewayIP();
-#if HardwarePlatform == 0  //ESP32 
                 if (!WiFi.config(myIP, gwIP, Set.mask, gwIP)) { Serial.println("STA Failed to configure"); }
-#endif
-#if HardwarePlatform == 1  //nano 33iot
-                WiFi.config(myIP, gwIP, gwIP, Set.mask);
-#endif
                 WiFi_connect_step++;
-                WiFi_connect_timer = now;
                 break;
             case 15:
                 myIP = WiFi.localIP();
@@ -106,7 +94,6 @@ void WiFi_handle_connection(void* pvParameters) {
                 Serial.print("Gateway IP - Address : "); Serial.println(gwIP);
                 my_WiFi_Mode = 1;// WIFI_STA;
                 WiFi_connect_step = 20;
-                WiFi_connect_timer = now;
                 break;
                 //no connection at first try, try again
             case 17:
@@ -120,17 +107,10 @@ void WiFi_handle_connection(void* pvParameters) {
                     WiFi_connect_step++;
                     Serial.print("-");
                 }
-                WiFi_connect_timer = now + 500;//wait a little longer
                 break;
             case 18:
-#if HardwarePlatform == 0  //ESP32 
                 WiFi.mode(WIFI_OFF); vTaskDelay(2);
-#endif
-#if HardwarePlatform == 1  //nano 33iot 
-                WiFi.end();
-#endif
                 WiFi_connect_step = 11; //set STA
-                WiFi_connect_timer = now + 500;
                 break;
 
                 //UDP
@@ -146,7 +126,6 @@ void WiFi_handle_connection(void* pvParameters) {
                 }
                 else { Serial.println("Error starting UDP"); }
                 WiFi_connect_step++;
-                WiFi_connect_timer = now;
                 break;
             case 21:
                 //init WiFi UPD listening to AOG 
@@ -161,18 +140,15 @@ void WiFi_handle_connection(void* pvParameters) {
                 delay(2);
 
                 WiFi_connect_step = 100;
-                WiFi_connect_timer = now;
                 break;
 
                 //Access point start
             case 50://start access point
                 WiFi_Start_AP();
                 WiFi_connect_step++;
-                WiFi_connect_timer = now;
                 break;
             case 51:
                 if (my_WiFi_Mode == 2) { WiFi_connect_step++; }
-                WiFi_connect_timer = now;
                 break;
             case 52://init WiFi UDP sending to AOG
                 WiFiUDPToAOG.begin(Set.PortAutostToAOG);
@@ -183,7 +159,6 @@ void WiFi_handle_connection(void* pvParameters) {
                 Serial.print("UDP writing from port: ");
                 Serial.println(Set.PortAutostToAOG);
                 WiFi_connect_step++;
-                WiFi_connect_timer = now;
                 break;
             case 53:
                 //init WiFi UPD listening to AOG 
@@ -193,7 +168,6 @@ void WiFi_handle_connection(void* pvParameters) {
                 Serial.println();
                 delay(2);
                 WiFi_connect_step = 100;
-                WiFi_connect_timer = now;
                 break;
 
                 //Webserver start
@@ -201,7 +175,6 @@ void WiFi_handle_connection(void* pvParameters) {
                 //start Server for Webinterface
                 WiFiStartServer();
                 WiFi_connect_step++;
-                WiFi_connect_timer = now;
                 break;
 
             case 101:
@@ -209,17 +182,10 @@ void WiFi_handle_connection(void* pvParameters) {
                 xTaskCreate(doWebinterface, "WebIOHandle", 5000, NULL, 1, &taskHandle_WebIO);
                 delay(300);
                 WiFi_connect_step = 0;
-                WiFi_connect_timer = 0;
                 LED_WIFI_ON = true;
                 Serial.println(); Serial.println();
-#if HardwarePlatform == 0  //ESP32
                 if (WiFi_netw_nr == 0) { myIP = WiFi.softAPIP(); }
-                else {
-#endif
-                    myIP = WiFi.localIP();
-#if HardwarePlatform == 0  //ESP32 
-                }
-#endif
+                else { myIP = WiFi.localIP(); }
 
                 Serial.print("started settings Webinterface at: ");
                 for (byte i = 0; i < 3; i++) {

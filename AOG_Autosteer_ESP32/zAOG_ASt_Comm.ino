@@ -82,7 +82,7 @@ void parseDataFromAOG() {
 	for (int i = 0; i < incommingDataLength[incommingBytesArrayNrToParse]; i++) {
 		//sentence comming? V4.6: 80 81 7F PGN  V4.3: 7F PGN so for V4. incomSentenceDigit is set to 2 instead of 0 for new sentence
 		if (incomSentenceDigit < 3) {
-			if (incommingBytes[incommingBytesArrayNrToParse][i] == AOGSentenceHeader[incomSentenceDigit]) {
+			if (incommingBytes[incommingBytesArrayNrToParse][i] == FromAOGSentenceHeader[incomSentenceDigit]) {
 				//Serial.println("first 3 Bytes fit: sentence");
 				SentenceFromAOG[incomSentenceDigit] = incommingBytes[incommingBytesArrayNrToParse][i];
 				incomSentenceDigit++;
@@ -457,7 +457,7 @@ void getDataFromAOG()
 
 		//sentence comming? V4.6: 80 81 7F PGN  V4.3: 7F PGN so for V4. incomSentenceDigit is set to 2 instead of 0 for new sentence
 		if (incomSentenceDigit < 3) {
-			if (incommingBytes[i] == AOGSentenceHeader[incomSentenceDigit]) {
+			if (incommingBytes[i] == FromAOGSentenceHeader[incomSentenceDigit]) {
 				//Serial.println("first 3 Bytes fit: sentence");
 				SentenceFromAOG[incomSentenceDigit] = incommingBytes[i];
 				incomSentenceDigit++;
@@ -475,7 +475,7 @@ void getDataFromAOG()
 
 			if (incomSentenceDigit == 3) {
 				//reset checkum
-				CRC_dataFromAOG = AOGSentenceHeader[2] + incommingBytes[i];
+				CRC_dataFromAOG = FromAOGSentenceHeader[2] + incommingBytes[i];
 				incomSentenceDigit++;
 				//which sentence comming? PGN
 				switch (incommingBytes[i]) {
@@ -667,7 +667,7 @@ void getDataFromAOG()
 void SendTwoThirty(byte check)
 {
 	if (Set.aogVersion == 17) {
-		byte TwoThirtyV17[10] = { AOGSentenceHeader[2],230,check,Set.aogVersion,0,0,0,0,0,0 };
+		byte TwoThirtyV17[10] = { FromAOGSentenceHeader[2],230,check,Set.aogVersion,0,0,0,0,0,0 };
 		if (Set.DataTransVia < 5) {
 			for (byte n = 0; n < sizeof(TwoThirtyV17) - 1; n++) {
 				Serial.print(TwoThirtyV17[n]); Serial.print(",");
@@ -692,7 +692,7 @@ void SendTwoThirty(byte check)
 		}
 	}
 	else {
-		byte TwoThirtyV20[] = { AOGSentenceHeader[0],AOGSentenceHeader[1],AOGSentenceHeader[2],230,2,check,Set.aogVersion, check + Set.aogVersion };
+		byte TwoThirtyV20[] = { FromAOGSentenceHeader[0],FromAOGSentenceHeader[1],FromAOGSentenceHeader[2],230,2,check,Set.aogVersion, check + Set.aogVersion };
 		if (Set.DataTransVia < 5) {//USB
 			Serial.write(TwoThirtyV20, sizeof(TwoThirtyV20));
 		}

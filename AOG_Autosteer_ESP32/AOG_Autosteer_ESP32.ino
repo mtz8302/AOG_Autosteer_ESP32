@@ -1,6 +1,6 @@
 // ready for AOG V4.6 Version and PINs for Adafruit feather by MTZ8302
-byte vers_nr = 40;
-char VersionTXT[120] = " - 9. Maerz 2021 by MTZ8302<br>(V4.6 ready, CMPS and Ethernet support)";
+byte vers_nr = 41;
+char VersionTXT[120] = " - 21. Maerz 2021 by MTZ8302<br>(V4.6 ready, CMPS and Ethernet support)";
 
 //##########################################################################################################
 //### Setup Zone ###########################################################################################
@@ -35,7 +35,7 @@ struct Storage {
 	//Ethernet
 	byte Eth_myip[4] = { 192, 168, 1, 78 };     // autosteer module 
 	byte Eth_ipDest_ending = 255;//ending of IP address to send UDP data to
-	byte Eth_mac[6] = { 0x90,0xA2,0xDA,0x10,0xB3,0x1B };
+	byte Eth_mac[6] = { 0x70,0x69,0x69,0x2D,0x30,0x31 };
 	bool Eth_static_IP = false;					// false = use DHPC and set last number to 80 (x.x.x.80) / true = use IP as set above
 
 	unsigned int PortAutostToAOG = 5577;             //this is port of this module: Autosteer = 5577 IMU = 5566 GPS = 
@@ -148,7 +148,7 @@ boolean EEPROM_clear = false;  //set to true when changing settings to write the
 #define steerDataSentenceToAOGLengthV17 10
 
 // sentences to AOG V4.6 and up -------------------------------------------------------------------	
-const byte AOGSentenceHeader[3] = { 0x80,0x81,0x7F };
+const byte FromAOGSentenceHeader[3] = { 0x80,0x81,0x7F };
 #define steerDataToAOGHeader  0xFD
 #define steerDataFromAOGHeader  0xFE 
 #define steerArdConfFromAOGHeader 0xFB
@@ -211,7 +211,7 @@ unsigned long LED_WIFI_time = 0, DataFromAOGTime = 0;
 boolean LED_WIFI_ON = false;
 
 //WIFI+Ethernet
-unsigned long WebIOTimeOut = 0, WiFi_connect_timer = 0, WiFi_network_search_timeout = 0;
+unsigned long WebIOTimeOut = 0, WiFi_network_search_timeout = 0;
 byte Eth_connect_step, WiFi_connect_step = 10, WiFi_STA_connect_call_nr = 1, WiFi_netw_nr = 0, my_WiFi_Mode = 0; // WIFI_STA = 1 = Workstation  WIFI_AP = 2  = Accesspoint
 IPAddress WiFi_ipDestination, Eth_ipDestination; //set in network.ino
 bool EthUDPRunning = false, WebIORunning = true, WiFiUDPRunning = false, newDataFromAOG = false;
@@ -274,15 +274,15 @@ void setup() {
 
 	//write PGN to output sentence	
 	if (Set.aogVersion == 17) {
-		steerToAOG[0] = AOGSentenceHeader[2];
+		steerToAOG[0] = FromAOGSentenceHeader[2];
 		steerToAOG[1] = steerDataToAOGHeader;  //same PGN as V4.6 or higher
 		DataToAOGLength = steerDataSentenceToAOGLengthV17;
 		incomSentenceDigit = 2;
 	}
 	else {
-		steerToAOG[0] = AOGSentenceHeader[0];   //0x80
-		steerToAOG[1] = AOGSentenceHeader[1];   //0x81
-		steerToAOG[2] = AOGSentenceHeader[2];   //0x7F
+		steerToAOG[0] = FromAOGSentenceHeader[0];   //0x80
+		steerToAOG[1] = FromAOGSentenceHeader[1];   //0x81
+		steerToAOG[2] = FromAOGSentenceHeader[2];   //0x7F
 		steerToAOG[3] = steerDataToAOGHeader;
 		steerToAOG[4] = steerDataSentenceToAOGLength - 6; //length of data = all - header - length - CRC
 		DataToAOGLength = steerDataSentenceToAOGLength;
@@ -710,7 +710,7 @@ void loop() {
 		//send packet  0 = USB / 7 = WiFi UDP / 10 = Ethernet UDP
 		if (Set.DataTransVia < 5) {//USB
 			if (Set.aogVersion == 17) {//V 4.3
-				Serial.print(AOGSentenceHeader[2]);	Serial.print(",");
+				Serial.print(FromAOGSentenceHeader[2]);	Serial.print(",");
 				Serial.print(steerDataToAOGHeader); Serial.print(",");
 				//steerangle			
 				Serial.print(int(steerAngleActual * 100)); Serial.print(",");
