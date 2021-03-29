@@ -476,33 +476,6 @@ void make_HTML01() {
 	strcat(HTML_String, VersionTXT);
 	strcat(HTML_String, "<br><hr>");
 
-	//debug values
-	strcat(HTML_String, "Settingsdata from AOG: Ackermann: ");
-	strcati(HTML_String,Set.AckermanFix );
-	strcat(HTML_String, " sensorCounts: ");
-	strcati(HTML_String, Set.steerSensorCounts);
-	//strcat(HTML_String, " WASoffset: ");
-	//strcati(HTML_String, Set.wasOffset);
-	strcat(HTML_String,"<br>minPWM: " );
-	strcati(HTML_String, Set.minPWM);
-	strcat(HTML_String, " lowPWM: ");
-	strcati(HTML_String, Set.lowPWM);
-	strcat(HTML_String, " high PWM: ");
-	strcati(HTML_String, Set.highPWM);
-	strcat(HTML_String, "<br><hr>");
-
-	strcat(HTML_String, "Steerdata from AOG: Guidance Status: ");
-	strcati(HTML_String, guidanceStatus);
-	strcat(HTML_String, " speed: ");
-	strcati(HTML_String, gpsSpeed);
-	strcat(HTML_String, "<br>SteerAngleSetPoint: ");
-	strcati(HTML_String, steerAngleSetPoint);
-	strcat(HTML_String, " SectGrFromAOG[0]: ");
-	strcati(HTML_String, SectGrFromAOG[0]);
-	strcat(HTML_String, " SectGrFromAOG[1]: ");
-	strcati(HTML_String, SectGrFromAOG[1]);
-	strcat(HTML_String, "<br><hr>");
-
 	//---------------------------------------------------------------------------------------------  
 	//load values of INO setup zone
 	strcat(HTML_String, "<h2>Load default values of INO setup zone</h2>");
@@ -559,7 +532,7 @@ void make_HTML01() {
 	strcat(HTML_String, "</tr>");
 
 	strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
-	strcat(HTML_String, "<tr><td colspan=\"2\"><b>Restart NTRIP client for changes to take effect</b></td>");
+	strcat(HTML_String, "<tr><td colspan=\"2\"><b>Reboot ESP32 for changes to take effect</b></td>");
 	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?ACTION=");
 	strcati(HTML_String, ACTION_RESTART);
 	strcat(HTML_String, "')\" style= \"width:120px\" value=\"Restart\"></button></td>");
@@ -1231,12 +1204,40 @@ void make_HTML01() {
 
 	//-------------------------------------------------------------
 	// Checkbox debugmode
-	strcat(HTML_String, "<h2>Debugmode</h2>");
+	strcat(HTML_String, "<h2>Debug</h2><hr>");
+
+	//debug values
+	strcat(HTML_String, "Settingsdata from AOG: Ackermann: ");
+	strcati(HTML_String, Set.AckermanFix);
+	strcat(HTML_String, " sensorCounts: ");
+	strcati(HTML_String, Set.steerSensorCounts);
+	//strcat(HTML_String, " WASoffset: ");
+	//strcati(HTML_String, Set.wasOffset);
+	strcat(HTML_String, "<br>minPWM: ");
+	strcati(HTML_String, Set.minPWM);
+	strcat(HTML_String, " lowPWM: ");
+	strcati(HTML_String, Set.lowPWM);
+	strcat(HTML_String, " high PWM: ");
+	strcati(HTML_String, Set.highPWM);
+	strcat(HTML_String, "<br><br>");
+
+	strcat(HTML_String, "Steerdata from AOG: Guidance Status: ");
+	strcati(HTML_String, guidanceStatus);
+	strcat(HTML_String, " speed: ");
+	strcati(HTML_String, gpsSpeed);
+	strcat(HTML_String, "<br>SteerAngleSetPoint: ");
+	strcati(HTML_String, steerAngleSetPoint);
+	strcat(HTML_String, " SectGrFromAOG[0]: ");
+	strcati(HTML_String, SectGrFromAOG[0]);
+	strcat(HTML_String, " SectGrFromAOG[1]: ");
+	strcati(HTML_String, SectGrFromAOG[1]);
+	strcat(HTML_String, "<br><hr>");
+
 	strcat(HTML_String, "<form>");
 	strcat(HTML_String, "<table>");
-	set_colgroup(300, 250, 150, 0, 0);
+	set_colgroup(150, 400, 150, 0, 0);
 
-	strcat(HTML_String, "<tr> <td colspan=\"3\">debugmode sends messages to USB serial</td> </tr>");
+	strcat(HTML_String, "<tr> <td colspan=\"3\"><b>Debugmode sends messages to USB serial</b></td> </tr>");
 	strcat(HTML_String, "<tr><td></td><td><input type=\"checkbox\" onclick=\"sendVal('/?debugmode='+this.checked)\" name=\"debugmode\" id = \"Part\" value = \"1\" ");
 	if (Set.debugmode == 1) strcat(HTML_String, "checked ");
 	strcat(HTML_String, "> ");

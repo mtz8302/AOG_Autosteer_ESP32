@@ -11,7 +11,6 @@ void assignGPIOs_start_extHardware() {
 #if useLED_BUILTIN
 	pinMode(LED_BUILTIN, OUTPUT);
 #endif	
-	if (Set.REMOTE_PIN < 255) { pinMode(Set.REMOTE_PIN, INPUT_PULLUP); }
 	if (Set.LEDWiFi_PIN < 255) { pinMode(Set.LEDWiFi_PIN, OUTPUT); }
 	if ((Set.WorkSW_mode > 0) && (Set.WORKSW_PIN < 255)) { pinMode(Set.WORKSW_PIN, INPUT_PULLUP); }
 	if (Set.Relay1_PIN < 255) { pinMode(Set.Relay1_PIN, OUTPUT); }
