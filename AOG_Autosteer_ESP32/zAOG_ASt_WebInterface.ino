@@ -245,65 +245,12 @@ void process_Request()
 		}
 		if (WiFi_Server.argName(n) == "IMU_TYPE") {
 			Set.IMUType = byte(WiFi_Server.arg(n).toInt());
-			if (!Set.IMUType) imu_initialized = 0;
-			if (Set.IMUType == 1) {
-				BNO.init();
-				delay(10);
-				BNO.setExtCrystalUse(true);   //use external 32K crystal
-			}
-			if (Set.IMUType == 2) {
-				Set.MMAInstalled = 0; //with CMPS switch off MMA
-				byte error;
-				Wire.beginTransmission(Set.CMPS14_ADDRESS);
-				error = Wire.endTransmission();
-				if (error == 0)
-				{
-					if (Set.debugmode) {
-						Serial.println("Error = 0");
-						Serial.print("CMPS14 ADDRESs: 0x");
-						Serial.println(Set.CMPS14_ADDRESS, HEX);
-						Serial.println("CMPS14 Ok.");
-					}
-				}
-				else
-				{
-					Serial.println("Error = 4");
-					Serial.print("CMPS not Connected or Found at address 0x");
-					Serial.println(Set.CMPS14_ADDRESS, HEX);
-					Set.IMUType = 0;
-				}
-			}
+			assignGPIOs_start_extHardware();
 		}
 		if (WiFi_Server.argName(n) == "INCLINO_TYPE") {
 			Set.MMAInstalled = byte(WiFi_Server.arg(n).toInt());
-			//init MMA
-			if (Set.MMAInstalled == 1) {
-				MMAinitialized = MMA1C.init();
-				delay(10);
-
-				if (MMAinitialized)
-				{
-					MMA1C.setDataRate(MMA_800hz);
-					MMA1C.setRange(MMA_RANGE_8G);
-					MMA1C.setHighPassFilter(false);
-					if (Set.debugmode) { Serial.println("MMA init OK"); }
-				}
-				else if (Set.debugmode) { Serial.println("MMA init fails!!"); }
-			}
-			if (Set.MMAInstalled == 2) {
-				MMAinitialized = MMA1D.init();
-				delay(10);
-
-				if (MMAinitialized)
-				{
-					MMA1D.setDataRate(MMA_800hz);
-					MMA1D.setRange(MMA_RANGE_8G);
-					MMA1D.setHighPassFilter(false);
-					if (Set.debugmode) { Serial.println("MMA init OK"); }
-				}
-				else if (Set.debugmode) { Serial.println("MMA init fails!!"); }
-			}
-		}
+			assignGPIOs_start_extHardware();
+		}		
 		if (WiFi_Server.argName(n) == "MMAAxis") { Set.UseMMA_X_Axis = byte(WiFi_Server.arg(n).toInt()); }
 		if (WiFi_Server.argName(n) == "rollMaxChan") {
 			argVal = WiFi_Server.arg(n).toInt();
@@ -468,7 +415,7 @@ void make_HTML01() {
 	//strcat( HTML_String, "<meta http-equiv=\"refresh\" content=\"10\">");
 	strcat(HTML_String, "<style>divbox {background-color: lightgrey;width: 200px;border: 5px solid red;padding:10px;margin: 10px;}</style>");
 	strcat(HTML_String, "</head>");
-	strcat(HTML_String, "<body bgcolor=\"#66b3ff\">");
+	strcat(HTML_String, "<body bgcolor=\"#ffcf00\">");//66b3ff
 	strcat(HTML_String, "<font color=\"#000000\" face=\"VERDANA,ARIAL,HELVETICA\">");
 	strcat(HTML_String, "<h1>AG Autosteer ESP config page</h1>");
 	strcat(HTML_String, "Version ");
@@ -632,30 +579,7 @@ void make_HTML01() {
 			strcat(HTML_String, "</tr>");
 		}
 	}
-/*
-	strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
 
-	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td><b>Remote button for</b></td>");
-	strcat(HTML_String, "<td><input onclick=\"sendVal('/?RSWITCH_TYPE=0')\" type = \"radio\" name=\"RSWITCH_TYPE\" id=\"JZ0\" value=\"0\"");
-	if (Set.SteerRemoteSwitch == 0)strcat(HTML_String, " CHECKED");
-	strcat(HTML_String, "><label for=\"JZ0\">unused</label></td>");
-	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
-	strcat(HTML_String, "</tr>");
-
-	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td><b>AOG autosteer</b></td>");
-	strcat(HTML_String, "<td><input type = \"radio\" onclick=\"sendVal('/?RSWITCH_TYPE=1')\" name=\"RSWITCH_TYPE\" id=\"JZ1\" value=\"1\"");
-	if (Set.SteerRemoteSwitch == 1)strcat(HTML_String, " CHECKED");
-	strcat(HTML_String, "><label for=\"JZ1\">Switch to GND</label></td>");
-	strcat(HTML_String, "</tr>");
-
-	strcat(HTML_String, "<tr><td>Remote switch linked to SteerSW</td>");
-	strcat(HTML_String, "<td><input type = \"radio\" onclick=\"sendVal('/?RSWITCH_TYPE=2')\" name=\"RSWITCH_TYPE\" id=\"JZ2\" value=\"2\"");
-	if (Set.SteerRemoteSwitch == 2)strcat(HTML_String, " CHECKED");
-	strcat(HTML_String, "><label for=\"JZ2\"></label>ONLY with steer switch</td>");
-	strcat(HTML_String, "</tr>");
-*/
 	strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
 
 	for (int i = 0; i < 3; i++) {
@@ -963,6 +887,7 @@ void make_HTML01() {
 	strcat(HTML_String, "<tr>");
 	strcat(HTML_String, "<td><br>Heading");
 	if (Set.IMUType == 2) { strcat(HTML_String, " from CPMS14"); }
+	if (Set.IMUType == 3) { strcat(HTML_String, " from BNO085"); }
 	strcat(HTML_String, "</td><td><divbox align=\"right\"><font size=\"+1\"><b>");
 	if (heading < 10) { strcatf(HTML_String, heading, 3, 1); }
 	else {
@@ -977,13 +902,14 @@ void make_HTML01() {
 
 	strcat(HTML_String, "<tr><td colspan=\"3\">&nbsp;</td></tr>");
 	strcat(HTML_String, "<tr>");
-	if (Set.IMUType == 2) {//CMPS
-		strcat(HTML_String, "<td><br>Roll from CMPS14</td>");
+	if (Set.IMUType > 1) {//CMPS BNO085
+		if (Set.IMUType == 2) { strcat(HTML_String, "<td><br>Roll from CMPS14</td>"); }
+		if (Set.IMUType == 3) { strcat(HTML_String, "<td><br>Roll from BNO085</td>"); }
 		strcat(HTML_String, "<td><divbox align=\"right\"><font size=\"+1\"><b>");
-		if (XeRoll < 10) { strcatf(HTML_String, XeRoll, 3, 1); }
+		if (roll < 10) { strcatf(HTML_String, roll, 3, 1); }
 		else {
-			if (XeRoll < 100) { strcatf(HTML_String, XeRoll, 4, 1); }
-			else { strcatf(HTML_String, XeRoll, 5, 1); }
+			if (roll < 100) { strcatf(HTML_String, roll, 4, 1); }
+			else { strcatf(HTML_String, roll, 5, 1); }
 		}
 		strcat(HTML_String, "</b></font></divbox>degree</td>");
 	}
@@ -1026,8 +952,8 @@ void make_HTML01() {
 	if (Set.MMAInstalled != 0) {
 		strcat(HTML_String, "<tr><td><br>Tilt Angle</td>");
 		strcat(HTML_String, "<td><divbox align=\"right\"><font size=\"+1\"><b>");
-		if ((XeRoll / 16) < 10) { strcatf(HTML_String, (XeRoll / 16), 3, 1); }
-		else { strcatf(HTML_String, (XeRoll / 16), 4, 1); }
+		if ((roll / 16) < 10) { strcatf(HTML_String, (roll / 16), 3, 1); }
+		else { strcatf(HTML_String, (roll / 16), 4, 1); }
 		strcat(HTML_String, "</b></font></divbox>degree</td>");
 
 		//Refresh button

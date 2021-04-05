@@ -1,6 +1,7 @@
 // WIFI handling 7. Maerz 2021 for ESP32  -------------------------------------------
 
 void WiFi_handle_connection(void* pvParameters) {
+    if (Set.DataTransVia > 10) { vTaskDelay(5000); } //start Ethernet first, if needed for data transfer
     for (;;) {
         if (WiFi_connect_step == 0) {
             if (Set.debugmode) { Serial.println("closing WiFi connection task"); }
@@ -215,228 +216,6 @@ void WiFi_handle_connection(void* pvParameters) {
 }
 
 
-
-
-
-// WIFI handling 14. Feb 2021 for ESP32  -------------------------------------------
-/*
-void WiFi_handle_connection() {
-    if (WiFi_connect_step > 0) {
-        IPAddress gwIP, myIP;
-        now = millis();
-
-        if (now > (WiFi_connect_timer + 500)) {
-            //do every half second
-            if (Set.debugmode) { Serial.print("WiFi_connect_step: "); Serial.println(WiFi_connect_step); }
-            switch (WiFi_connect_step) {
-                //WiFi network scan
-            case 10:
-                WiFi_netw_nr = 0;
-                WebIORunning = false;
-                WiFiUDPRunning = false;
-                if (WiFi_network_search_timeout == 0) {   //first run                 
-                    WiFi_network_search_timeout = now + (Set.timeoutRouter * 1000);
-                }
-                WiFi_scan_networks();
-                //timeout?
-                if (now > WiFi_network_search_timeout) { WiFi_connect_step = 50; }
-                else {
-                    if (WiFi_netw_nr > 0) {
-                        //found network
-                        WiFi_connect_step++;
-                        WiFi_network_search_timeout = 0;//reset timer
-                    }
-                }
-                WiFi_connect_timer = millis();
-                break;
-                //start WiFi connection
-            case 11:
-                WiFi.mode(WIFI_STA);   //  Workstation 
-                WiFi_connect_step++;
-                WiFi_connect_timer = now;
-                break;
-            case 12:
-                if (WiFi_network_search_timeout == 0) {   //first run  
-                    WiFi_network_search_timeout = now + (Set.timeoutRouter * 500);//half time
-                }
-                WiFi_STA_connect_network();
-                WiFi_connect_step++;
-                WiFi_connect_timer = now;
-                break;
-            case 13:
-                if (WiFi.status() != WL_CONNECTED) {
-                    Serial.print(".");
-                    WiFi_connect_timer = now - 200;//check faster
-                    if (now > WiFi_network_search_timeout) {
-                        //timeout
-                        WiFi_STA_connect_call_nr++;
-                        WiFi_connect_step = 17;//close WiFi and try again
-                        WiFi_network_search_timeout += (Set.timeoutRouter * 500);//add rest of time
-                    }
-                }
-                else {
-                    //connected
-                    WiFi_connect_step++;
-                    WiFi_network_search_timeout = 0;//reset timer
-                    WiFi_connect_timer = now + 700;//wait longer to get correct IP
-                }
-                break;
-                //change IP / DHCP
-            case 14:
-                //connected
-                Serial.println();
-                Serial.println("WiFi Client successfully connected");
-                Serial.print("Connected IP - Address : ");
-                myIP = WiFi.localIP();
-                Serial.println(myIP);
-                //after connecting get IP from router -> change it to x.x.x.IP Ending (from settings)
-                myIP[3] = Set.WiFi_myip[3]; //set ESP32 IP to x.x.x.myIP_ending
-                Serial.print("changing IP to: ");
-                Serial.println(myIP);
-                gwIP = WiFi.gatewayIP();
-                if (!WiFi.config(myIP, gwIP, Set.mask, gwIP)) { Serial.println("STA Failed to configure"); }
-                WiFi_connect_step++;
-                WiFi_connect_timer = now;
-                break;
-            case 15:
-                myIP = WiFi.localIP();
-                Serial.print("Connected IP - Address : "); Serial.println(myIP);
-                WiFi_ipDestination = myIP;
-                WiFi_ipDestination[3] = Set.WiFi_ipDest_ending;
-                Serial.print("sending to IP - Address : "); Serial.println(WiFi_ipDestination);
-                gwIP = WiFi.gatewayIP();
-                Serial.print("Gateway IP - Address : "); Serial.println(gwIP);
-                my_WiFi_Mode = 1;// WIFI_STA;
-                WiFi_connect_step = 20;
-                WiFi_connect_timer = now;
-                break;
-                //no connection at first try, try again
-            case 17:
-                if (WiFi_STA_connect_call_nr > 2) { //create access point
-                    WiFi_connect_step = 50;
-                    WiFi_netw_nr = 0;
-                }
-                else {
-                    WiFi.disconnect();
-                    delay(2);
-                    WiFi_connect_step++;
-                    Serial.print("-");
-                }
-                WiFi_connect_timer = now + 500;//wait a little longer
-                break;
-            case 18:
-                WiFi.mode(WIFI_OFF); delay(2);
-                WiFi_connect_step = 11; //set STA
-                WiFi_connect_timer = now + 500;
-                break;
-
-                //UDP
-            case 20://init WiFi UDP sending to AOG
-                if (WiFiUDPToAOG.begin(Set.PortAutostToAOG))
-                {
-                    Serial.print("UDP writing to IP: ");
-                    Serial.println(WiFi_ipDestination);
-                    Serial.print("UDP writing to port: ");
-                    Serial.println(Set.PortDestination);
-                    Serial.print("UDP writing from port: ");
-                    Serial.println(Set.PortAutostToAOG);
-                }
-                else { Serial.println("Error starting UDP"); }
-                WiFi_connect_step++;
-                WiFi_connect_timer = now;
-                break;
-            case 21:
-                //init WiFi UPD listening to AOG 
-                if (WiFiUDPFromAOG.begin(Set.PortFromAOG))
-                {
-                    Serial.print("WiFi UDP Listening for AOG data to port: ");
-                    Serial.println(Set.PortFromAOG);
-                    Serial.println();
-                    WiFiUDPRunning = true;
-                }
-                else { Serial.println("Error starting UDP"); }
-                delay(2);
-                
-                WiFi_connect_step = 100;
-                WiFi_connect_timer = now;
-                break;
-
-                //Access point start
-            case 50://start access point
-                WiFi_Start_AP();
-                WiFi_connect_step++;
-                WiFi_connect_timer = now;
-                break;
-            case 51:
-                if (my_WiFi_Mode == WIFI_AP) { WiFi_connect_step++; }
-                WiFi_connect_timer = now;
-                break;
-            case 52://init WiFi UDP sending to AOG
-                WiFiUDPToAOG.begin(Set.PortAutostToAOG);
-                Serial.print("UDP writing to IP: ");
-                Serial.println(WiFi_ipDestination);
-                Serial.print("UDP writing to port: ");
-                Serial.println(Set.PortDestination);
-                Serial.print("UDP writing from port: ");
-                Serial.println(Set.PortAutostToAOG);
-                WiFi_connect_step++;
-                WiFi_connect_timer = now;
-                break;
-            case 53:
-                //init WiFi UPD listening to AOG 
-                WiFiUDPFromAOG.begin(Set.PortFromAOG);
-                Serial.print("NTRIP WiFi UDP Listening to port: ");
-                Serial.println(Set.PortFromAOG);
-                Serial.println();
-                delay(2);
-                WiFi_connect_step = 100;
-                WiFi_connect_timer = now;
-                break;
-
-                //Webserver start
-            case 100:
-                //start Server for Webinterface
-                WiFiStartServer();
-                WiFi_connect_step++;
-                WiFi_connect_timer = now;
-                break;
-
-            case 101:
-                WebIORunning = true;
-                WebIOTimeOut = millis() + (long(Set.timeoutWebIO) * 60000);
-                WiFi_connect_step = 0;
-                WiFi_connect_timer = 0;
-                LED_WIFI_ON = true;
-                Serial.println(); Serial.println();
-                if (WiFi_netw_nr == 0) { myIP = WiFi.softAPIP(); }
-                else { myIP = WiFi.localIP(); }
-                Serial.print("started settings Webinterface at: ");
-                for (byte i = 0; i < 3; i++) {
-                    Serial.print(myIP[i]); Serial.print(".");
-                }
-                Serial.println(myIP[3]);
-                Serial.println("type IP in Internet browser to get to webinterface");
-                Serial.print("you need to be in WiFi network ");
-                switch (WiFi_netw_nr) {
-                case 0: Serial.print(Set.ssid_ap); break;
-                case 1: Serial.print(Set.ssid1); break;
-                }
-                Serial.println(" to get access"); Serial.println(); Serial.println();
-#if useLED_BUILTIN
-                digitalWrite(LED_BUILTIN, HIGH);
-#endif
-                digitalWrite(Set.LEDWiFi_PIN, Set.LEDWiFi_ON_Level);
-                break;
-
-            default:
-                WiFi_connect_step++;
-                Serial.print("default called at WiFi_connection_step "); Serial.println(WiFi_connect_step);
-                break;
-            }
-        }
-    }
-}*/
-
 //---------------------------------------------------------------------
 // scanning for known WiFi networks
 
@@ -513,7 +292,7 @@ void WiFi_Start_AP() {
 void Eth_handle_connection(void* pvParameters) {
     unsigned long Eth_connect_timer = 0, now = 0;
     if (Set.timeoutRouter < 12) { if (WiFi_connect_step != 0) { vTaskDelay(18000); } }//waiting for WiFi to start first
-    Serial.println("started new task on core 0: Ethernet handle connection");
+    Serial.println("started new task: Ethernet handle connection");
     for (;;) { // MAIN LOOP
         now = millis();
         if (Set.debugmode) { Serial.print("Ethernet connection step: "); Serial.println(Eth_connect_step); }
@@ -538,7 +317,11 @@ void Eth_handle_connection(void* pvParameters) {
                         Eth_connect_step = 255;//no Ethernet, end Ethernet
                         if (Set.DataTransVia == 10) {
                             Set.DataTransVia = 7; //change DataTransfer to WiFi
-                            if (WiFi_connect_step == 255) { WiFi_connect_step = 10; }//start WiFi if not running
+                            if (EthDataTaskRunning) { vTaskDelete(taskHandle_DataFromAOGEth); delay(5); EthDataTaskRunning = false; }
+                            if (!WiFiDataTaskRunning) {                               
+                                xTaskCreate(getDataFromAOGWiFi, "DataFromAOGHandleWiFi", 5000, NULL, 1, &taskHandle_DataFromAOGWiFi);
+                                delay(500);
+                            }//start WiFi if not running
                         }
                     }
                     else {

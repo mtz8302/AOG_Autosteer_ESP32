@@ -1,8 +1,7 @@
-
 //--------------------------------------------------------------
-//  EEPROM Data Handling 11. Mrz 2020
+//  EEPROM Data Handling 7. Maerz 2021
 //--------------------------------------------------------------
-#define EEPROM_SIZE 512 //2x 224 needed 7. Maerz 2021
+#define EEPROM_SIZE 1024 //5. April 2021: 2x 236 needed
 #define EE_ident1 0xED  // Marker Byte 0 + 1
 byte EE_ident2 = vers_nr;
 
@@ -15,22 +14,23 @@ void restoreEEprom() {
 	byte ECheck = EEprom_empty_check();
 	if (ECheck == 1 || EEPROM_clear) { //first start?
 		EEprom_write_all();     //write default data
+		Serial.println("EEPROM write all");
 	}
 	if (ECheck == 2) { //data available
 		EEprom_read_all();
+		Serial.println("EEPROM read all");
 	}
 	if (Set.debugmode) { EEprom_show_memory(); }
 }
 
 //--------------------------------------------------------------
 byte EEprom_empty_check() {
-
 	if (!EEPROM.begin(EEPROM_SIZE))
 	{
 		Serial.println("init EEPROM failed"); delay(1000);
 		return 0;
 	}
-	delay(10);
+
 	if ((EEPROM.read(0) != EE_ident1) || (EEPROM.read(1) != EE_ident2))
 	{
 		Serial.println("no valid EEPROM data");
@@ -44,26 +44,27 @@ byte EEprom_empty_check() {
 		return 2;     // data available
 	}
 }
+//-------------------------------------------------------------------------------------------------
 
-//--------------------------------------------------------------
 void EEprom_write_all() {
-	byte leng = sizeof(Set);
+	int leng = sizeof(Set);
 	byte tempbyt = EEprom_empty_check();
 	if ((tempbyt == 0) || (tempbyt == 1) || (EEPROM_clear)) {
 		//EEPROM.put((4 + sizeof(Set)), Set); 
 		Serial.print("rewriting EEPROM + write 2. set at #"); Serial.println(4 + leng);
 		//write 2. time with defaults to be able to reload them  
-		for (byte n = 0; n < leng; n++) {
+		for (int n = 0; n < leng; n++) {
 			EEPROM.write(n + 4 + leng, ((unsigned char*)(&Set))[n]);
 			delay(2);
 		}
+		//EEPROM.put(4 + leng, Set);
 		delay(50);
 		EEPROM.commit();
 		delay(50);
 		EEPROM.write(0, EE_ident1);	delay(2);
 		EEPROM.write(1, EE_ident2); delay(2);
 	}
-	for (byte n = 0; n < leng; n++) {
+	for (int n = 0; n < leng; n++) {
 		EEPROM.write(n + 3, ((unsigned char*)(&Set))[n]);
 		delay(2);
 	}
@@ -74,10 +75,10 @@ void EEprom_write_all() {
 }
 //--------------------------------------------------------------
 void EEprom_read_all() {
-	byte leng = sizeof(Set);
+	int leng = sizeof(Set);
 	Serial.print(leng);
 	Serial.println(" Bytes reading from EEPROM ");
-	for (byte n = 0; n < leng; n++) {
+	for (int n = 0; n < leng; n++) {
 		((unsigned char*)(&Set))[n] = EEPROM.read(n + 3);
 	}
 	//	EEPROM.get(3, Set);
@@ -85,13 +86,14 @@ void EEprom_read_all() {
 }
 //--------------------------------------------------------------
 void EEprom_read_default() {
-	byte leng = sizeof(Set);
-	for (byte n = 0; n < leng; n++) {
+	int leng = sizeof(Set);
+	for (int n = 0; n < leng; n++) {
 		((unsigned char*)(&Set))[n] = EEPROM.read(n + 4 + leng);
 	}
 	//EEPROM.get(4 + sizeof(Set), Set);
 	Serial.print("load default value from EEPROM at #"); Serial.println(4 + sizeof(Set));
 }
+
 //--------------------------------------------------------------
 
 void EEprom_block_restart() {
