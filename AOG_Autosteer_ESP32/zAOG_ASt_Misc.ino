@@ -1,9 +1,9 @@
 void SetRelays(void)
 {
-	if (bitRead(SectGrFromAOG[0], 0)) digitalWrite(Set.Relay1_PIN, Set.Relays_ON);
-	else digitalWrite(Set.Relay1_PIN, !Set.Relays_ON);
-	if (bitRead(SectGrFromAOG[0], 1)) digitalWrite(Set.Relay2_PIN, Set.Relays_ON);
-	else digitalWrite(Set.Relay2_PIN, !Set.Relays_ON);
+	if (bitRead(SectGrFromAOG[0], 0)) digitalWrite(Set.Relay_PIN[0], Set.Relays_ON);
+	else digitalWrite(Set.Relay_PIN[0], !Set.Relays_ON);
+	if (bitRead(SectGrFromAOG[0], 1)) digitalWrite(Set.Relay_PIN[1], Set.Relays_ON);
+	else digitalWrite(Set.Relay_PIN[1], !Set.Relays_ON);
 
 }
 

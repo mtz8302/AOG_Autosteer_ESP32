@@ -1,11 +1,11 @@
 // ESP32 code for autosteer unit for AgOpenGPS
 
-// ready for AOG V4.3 + V5.x.20 Version
+// ready for AOG V4.3 + V5.x Version
 // PINs for GormR central unit PCB (V1.8) see GitHub https://github.com/GormR/HW_for_AgOpenGPS
 // by MTZ8302 see GitHub https://github.com/mtz8302 and Youtube Ma Ha MTZ8302 https://www.youtube.com/channel/UCv44DlUXQJKbQjzaOUssVgw
 
-byte vers_nr = 43;
-char VersionTXT[120] = " - 5. April 2021 by MTZ8302<br>(V4.3 + V5 ready, CMPS/BNO085 and Ethernet support)";
+byte vers_nr = 44;
+char VersionTXT[120] = " - 16. April 2021 by MTZ8302<br>(V4.3 + V5 ready, CMPS/BNO085 and Ethernet support)";
 
 //##########################################################################################################
 //### Setup Zone ###########################################################################################
@@ -26,10 +26,10 @@ struct Storage {
 	//WiFi
 	char ssid1[24] = "Fendt_209V";                // WiFi network Client name
 	char password1[24] = "";                      // WiFi network password
-	char ssid_ap[24] = "Autosteer_unit_F9P_Net";  // name of Access point, if no WiFi found, NO password!!
+	char ssid_ap[24] = "Autosteer_unit_Net";	  // name of Access point, if no WiFi found, NO password!!
 	uint16_t timeoutRouter = 120;                 // time (seconds) to wait for WIFI access, after that own Access Point starts
 	byte timeoutWebIO = 255;                      // time (min) afterwards webinterface is switched off
-	
+
 	byte WiFi_myip[4] = { 192, 168, 1, 77 };      // autosteer module 
 	byte WiFi_gwip[4] = { 192, 168, 1, 1 };       // Gateway IP only used if Accesspoint created
 	byte WiFi_ipDest_ending = 255;                // ending of IP address to send UDP data to
@@ -45,16 +45,18 @@ struct Storage {
 	unsigned int PortAutostToAOG = 5577;          // this is port of this module: Autosteer = 5577 IMU = 5566 GPS = 
 	unsigned int PortFromAOG = 8888;              // port to listen for AOG
 	unsigned int PortDestination = 9999;          // port of AOG that listens
-	
+
 	//general settings
 	uint8_t aogVersion = 20;			                // Version number for version check 4.3.10 = 4+3+10 = 17	
 
 	byte DataTransVia = 7;                        // transfer data via 0 = USB / 7 = WiFi UDP / 10 = Ethernet UDP
 
 	uint8_t output_type = 2;                      // set to 1  if you want to use Stering Motor + Cytron MD30C Driver
-								                                // set to 2  if you want to use Stering Motor + IBT 2  Driver
-								                                // set to 3  if you want to use IBT 2  Driver + PWM 2-Coil Valve
-								                                // set to 4  if you want to use  IBT 2  Driver + Danfoss Valve PVE A/H/M
+																// set to 2  if you want to use Stering Motor + IBT 2  Driver
+																// set to 3  if you want to use IBT 2  Driver + PWM 2-Coil Valve
+																// set to 4  if you want to use  IBT 2  Driver + Danfoss Valve PVE A/H/M
+
+
 	uint16_t PWMOutFrequ = 20000;                 // PWM frequency for motordriver: 1000Hz:for low heat at PWM device 20000Hz: not hearable
 
 	uint8_t	MotorDriveDirection = 0;              // 0 = normal, 1 = inverted
@@ -62,11 +64,11 @@ struct Storage {
 	uint8_t MotorSlowDriveDegrees = 5;	          // How many degrees before decreasing Max PWM
 
 	uint8_t WASType = 2;                          // 0 = No ADS installed, Wheel Angle Sensor connected directly to ESP at GPIO 36 (pin set below) (attention 3,3V only)
-								                                // 1 = Single Mode of ADS1115 - Sensor Signal at A0 (ADS)
-								                                // 2 = Differential Mode - Connect Sensor GND to A1, Signal to A0
+																// 1 = Single Mode of ADS1115 - Sensor Signal at A0 (ADS)
+																// 2 = Differential Mode - Connect Sensor GND to A1, Signal to A0
 
 	uint8_t IMUType = 0;                          // 0: none, 1: BNO055 IMU, 2: CMPS14, 3: BNO080 + BNO085
-	
+
 	//CMPS14	
 	int CMPS14_ADDRESS = 0x60;                    // Address of CMPS14 shifted right one bit for arduino wire library
 	float CMPS14HeadingCorrection = 0.0;		      // not used at the moment
@@ -88,6 +90,8 @@ struct Storage {
 	uint8_t InvertWAS = 0;                        // set to 1 to Change Direction of Wheel Angle Sensor - to + 
 
 	uint8_t ShaftEncoder = 0;                     // Steering Wheel ENCODER Installed
+	uint8_t PressureSensor = 0;		        // (not supported at the moment)
+	uint8_t CurrentSensor = 0;		        // (not supported at the moment)
 	uint8_t pulseCountMax = 3;                    // Switch off Autosteer after x Pulses from Steering wheel encoder 
 
 	uint16_t WebIOSteerPosZero = 10300;	          // first value for steer zero position ADS: 11000 for EPS32 AD PIN: 2048
@@ -95,7 +99,8 @@ struct Storage {
 	uint8_t AckermanFix = 78;		                  // if values for left and right are the same: 100 
 
 	uint8_t SteerSwitchType = 1;                  // 0 = enable = switch high (3,3V) //1 = enable = switch low(GND) //2 = toggle = button to low(GND)
-								                                // 3 = enable = button to high (3,3V), disable = button to low (GND), neutral = 1,65V
+																// 3 = enable = button to high (3,3V), disable = button to low (GND), neutral = 1,65V
+													// 255 = no steer switch, allways on if AOG steering is active
 
 	uint8_t WorkSW_mode = 2;                      // 0 = disabled // 1 = digital ON/OFF // 2 = analog Value 0...4095 (0 - 3,3V)
 
@@ -106,7 +111,7 @@ struct Storage {
 
 	uint16_t WorkSW_Threshold = 1600;             // Value for analog hitch level to switch workswitch  (0-4096)
 
-	
+
 	// IO pins ------------------------------------------------------------------
 
 	// set to 255 for unused !!!!!
@@ -117,8 +122,9 @@ struct Storage {
 	uint8_t LEDWiFi_PIN = 0;            // light on WiFi connected, flashes on searching Network. If GPIO 0 is used LED must be activ LOW otherwise ESP won't boot
 	uint8_t LEDWiFi_ON_Level = LOW;	    // HIGH = LED on high, LOW = LED on low
 
-	uint8_t Relay1_PIN = 255;		        // (not supported at the moment) relais for section control
-	uint8_t Relay2_PIN = 255;		        // (not supported at the moment)
+										// (not supported at the moment) relais for section control
+	uint8_t Relay_PIN[16] = { 255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255 }; 
+	uint8_t Tram_PIN[3] = { 255,255,255 };  // (not supported at the moment) relais for tramline control
 	uint8_t Relays_ON = HIGH;		        // HIGH = Relay on high, LOW = Relay on low
 
 	uint8_t WAS_PIN = 36;               // PIN for Wheel Angle Sensor (none, if ADS used)
@@ -128,14 +134,14 @@ struct Storage {
 	uint8_t encA_PIN = 4;               // Pin for steer encoder, to turn off autosteer if steering wheel is used
 	uint8_t encB_PIN = 32;              // Pin for steer encoder, to turn off autosteer if steering wheel is used
 
-	uint8_t Servo_PIN =16;			        // (not supported at the moment) Pin for servo to pull motor to steering wheel
+	uint8_t Servo_PIN = 16;			        // (not supported at the moment) Pin for servo to pull motor to steering wheel
 
 	uint8_t PWM_PIN = 27;               // PWM Output to motor controller (IBT2 or cytron)
 	uint8_t DIR_PIN = 26;               // direction output to motor controller (IBT2 or cytron)
 	uint8_t Current_sens_PIN = 35;	    // (not supported at the moment) current sensor for IBT2 to read the force needed to turn steering wheel
 
 	uint8_t Eth_CS_PIN = 5;             // CS PIN with SPI Ethernet hardware  SPI config: MOSI 23 / MISO 19 / CLK18 / CS5
-	
+
 	uint8_t CAN_RX_PIN = 25;		        // (not supported at the moment) CAN bus 
 	uint8_t CAN_TX_PIN = 17;		        // (not supported at the moment)
 
@@ -148,10 +154,10 @@ struct Storage {
 	float Ki = 0.001f;    //integral gain
 	float Kd = 1.0f;      //derivative gain 
 	float AOGSteerPositionZero = 0;
-	float steerSensorCounts = 100;  
+	float steerSensorCounts = 100;
 	uint16_t roll_corr = 200;
-	byte minPWM = 40, highPWM = 150, lowPWM = 60;	
-	
+	byte minPWM = 40, highPWM = 150, lowPWM = 60;
+
 	bool debugmode = false;
 	bool debugmodeDataFromAOG = false;
 
@@ -377,6 +383,7 @@ void loop() {
 	}
 
 	//read steer switch
+	int tempvalue = 0;
 	switch (Set.SteerSwitchType)
 	{
 	case 0:
@@ -412,7 +419,7 @@ void loop() {
 		steerSwitch = steerEnable;
 		break;
 	case 3:
-		byte tempvalue = analogRead(Set.STEERSW_PIN);
+		tempvalue = analogRead(Set.STEERSW_PIN);
 		if (tempvalue < 800) { steerEnable = false; }
 		if (tempvalue > 3200) { steerEnable = true; }
 		if (steerEnableOld != steerEnable) {
@@ -422,6 +429,24 @@ void loop() {
 			}
 			steerEnableOld = steerEnable;
 		}
+		steerSwitch = steerEnable;
+		break;
+	case 255:
+		// No steer switch and no steer button
+		// So set the correct value. When guidanceStatus = 1, 
+		// it should be on because the button is pressed in the GUI
+		// But the guidancestatus should have set it off first (first run)
+		if (bitRead(guidanceStatus, 0)) {
+			if ((steerEnable) || (steerEnableOld))//not first run
+			{
+				steerEnable = true;
+			}
+		}
+		else{
+			steerEnable = false;
+			steerEnableOld = true;//reset first run, so next time will turn on
+		}
+		
 		steerSwitch = steerEnable;
 		break;
 	}

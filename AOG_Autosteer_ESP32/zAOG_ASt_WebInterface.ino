@@ -20,7 +20,7 @@ char imu_type_tab[3][10] = { "None", "BNO 055","CMPS14" };
 char inclino_type_tab[3][50] = { "None", "MMA 8452 at address 1C (adr PIN open)" ,"MMA 8452 at address 1D (adr PIN to GND)"};
 
 // Radiobutton Steerswitch
-char steersw_type_tab[5][15] = { "Switch High", "Switch Low", "Toggle Button", "Analog Buttons","" };
+char steersw_type_tab[6][22] = { "Switch High", "Switch Low", "Toggle Button", "Analog Buttons","none (AOG controlled)","" };
 
 // Radiobutton Workswitch
 char worksw_type_tab[4][8] = { "None", "Digital", "Analog", "" };
@@ -272,7 +272,10 @@ void process_Request()
 		}
 		if (WiFi_Server.argName(n) == "ENC_TYPE") { Set.ShaftEncoder = byte(WiFi_Server.arg(n).toInt()); }
 		if (WiFi_Server.argName(n) == "ENC_COUNTS") { Set.pulseCountMax = byte(WiFi_Server.arg(n).toInt()); }
-		if (WiFi_Server.argName(n) == "SSWITCH_TYPE") { Set.SteerSwitchType = byte(WiFi_Server.arg(n).toInt()); }
+		if (WiFi_Server.argName(n) == "SSWITCH_TYPE") { 
+			Set.SteerSwitchType = byte(WiFi_Server.arg(n).toInt());
+			if (Set.SteerSwitchType == 4) {Set.SteerSwitchType = 255;}//none
+		}
 	//	if (WiFi_Server.argName(n) == "RSWITCH_TYPE") { Set.SteerRemoteSwitch = byte(WiFi_Server.arg(n).toInt()); }
 		if (WiFi_Server.argName(n) == "WSWITCH_TYPE") { Set.WorkSW_mode = byte(WiFi_Server.arg(n).toInt()); }
 		if (WiFi_Server.argName(n) == "invWoSw") {
@@ -579,7 +582,13 @@ void make_HTML01() {
 			strcat(HTML_String, "</tr>");
 		}
 	}
-
+	strcat(HTML_String, "<tr><td> </td>");
+	strcat(HTML_String, "<td><input type = \"radio\" onclick=\"sendVal('/?SSWITCH_TYPE=255')\"name=\"SSWITCH_TYPE\" id=\"JZ255");
+	strcat(HTML_String, "\" value=\"255\"");
+	if (Set.SteerSwitchType == 255)strcat(HTML_String, " CHECKED");
+	strcat(HTML_String, "><label for=\"JZ255\">");
+	strcat(HTML_String, steersw_type_tab[4]);
+	strcat(HTML_String, "</label></td>");
 	strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
 
 	for (int i = 0; i < 3; i++) {

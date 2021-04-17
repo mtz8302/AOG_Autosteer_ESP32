@@ -13,8 +13,8 @@ void assignGPIOs_start_extHardware() {
 #endif	
 	if (Set.LEDWiFi_PIN < 255) { pinMode(Set.LEDWiFi_PIN, OUTPUT); }
 	if ((Set.WorkSW_mode > 0) && (Set.WORKSW_PIN < 255)) { pinMode(Set.WORKSW_PIN, INPUT_PULLUP); }
-	if (Set.Relay1_PIN < 255) { pinMode(Set.Relay1_PIN, OUTPUT); }
-	if (Set.Relay2_PIN < 255) { pinMode(Set.Relay2_PIN, OUTPUT); }
+	if (Set.Relay_PIN[0] < 255) { pinMode(Set.Relay_PIN[0], OUTPUT); }
+	if (Set.Relay_PIN[1] < 255) { pinMode(Set.Relay_PIN[1], OUTPUT); }
 
 	//no check if < 255 as needed for autosteer in every case
 	pinMode(Set.AutosteerLED_PIN, OUTPUT);

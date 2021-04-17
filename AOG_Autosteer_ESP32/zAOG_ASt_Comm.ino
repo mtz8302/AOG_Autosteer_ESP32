@@ -299,10 +299,18 @@ void parseDataFromAOG() {
 									if (bitRead(SentenceFromAOG[5], 2)) Set.MotorDriveDirection = 1; else Set.MotorDriveDirection = 0;
 									//if (bitRead(SentenceFromAOG[5], 3)) Set.SingleInputWAS = 1; else Set.SingleInputWAS = 0;
 									//if (bitRead(SentenceFromAOG[5], 4)) Set.CytronDriver = 1; else Set.CytronDriver = 0;
-									//if (bitRead(SentenceFromAOG[5], 5)) Set.SteerSwitch = 1; else Set.SteerSwitch = 0;
-									if (bitRead(SentenceFromAOG[5], 6)) Set.ShaftEncoder = 1; else Set.ShaftEncoder = 0;
+									if (bitRead(SentenceFromAOG[5], 5)) Set.SteerSwitchType = 1;//switch to GND
+									if (bitRead(SentenceFromAOG[5], 6)) Set.SteerSwitchType = 2;//button
+									else {
+										if (!bitRead(SentenceFromAOG[5], 5)) { Set.SteerSwitchType = 255; }//none
+									}
+									if (bitRead(SentenceFromAOG[5], 7)) Set.ShaftEncoder = 1; else Set.ShaftEncoder = 0;
 
 									Set.pulseCountMax = SentenceFromAOG[6];
+
+									//if (bitRead(SentenceFromAOG[8], 0)) Set.IsDanfoss = 1; else Set.IsDanfoss = 0;
+									//if (bitRead(SentenceFromAOG[8], 1)) Set.PressureSensor = 1; else Set.PressureSensor = 0;
+									//if (bitRead(SentenceFromAOG[8], 2)) Set.CurrentSensor = 1; else Set.CurrentSensor = 0;
 
 									EEprom_write_all();
 
