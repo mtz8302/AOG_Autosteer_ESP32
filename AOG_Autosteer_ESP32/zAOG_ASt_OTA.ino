@@ -1,52 +1,4 @@
 //-------------------------------------------------------------------------------------------------
-// Login page
-/*
-const char* loginIndex =
-"<form name='loginForm'>"
-"<table width='20%' bgcolor='A09F9F' align='center'>"
-"<tr>"
-"<td colspan=2>"
-"<center><font size=4><b>ESP32 update Login Page</b></font></center>"
-"<br>"
-"</td>"
-"<br>"
-"<br>"
-"</tr>"
-"<td>Username: admin</td>"
-"<td><input type='text' size=25 name='userid'><br></td>"
-"</tr>"
-"<br>"
-"<br>"
-"<tr>"
-"<td>Password: autosteer</td>"
-"<td><input type='Password' size=25 name='pwd'><br></td>"
-"<br>"
-"<br>"
-"</tr>"
-"<tr>"
-"<td><input type='submit' onclick='check(this.form)' value='Login'></td>"
-"<td><input type='submit' onclick='cancel(this.form)' value='Cancel'></td>"
-//"<td><button style= \"width:120px\" name=\"cancel\">cancel update</button></td></tr>"
-"</tr>"
-"</table>"
-"</form>"
-"<script>"
-"function check(form)"
-"{"
-"window.open('/serverIndex')"
-"}"
-"</script>"
-"<script>"
-"function cancel(form)"
-"{"
-//"window.open('/cancel')"
-"window.close"
-"}"
-"</script>";
-
-*/
-
-//-------------------------------------------------------------------------------------------------
 // Server Index Page 
 
 const char* serverIndex =
@@ -55,7 +7,7 @@ const char* serverIndex =
 "<title>Firmware updater</title>"
 "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0;\" />\r\n""<style>divbox {background-color: lightgrey;width: 200px;border: 5px solid red;padding:10px;margin: 10px;}</style>"
 "</head>"
-"<body bgcolor=\"#66b3ff\">""<font color=\"#000000\" face=\"VERDANA,ARIAL,HELVETICA\">"
+"<body bgcolor=\"#ffcf00\">""<font color=\"#000000\" face=\"VERDANA,ARIAL,HELVETICA\">"
 "<h1>ESP firmware update</h1>"
 "ver 4.2 26. Apr. 2020<br><br>"
 "<form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>"

@@ -1,60 +1,31 @@
 void calcSteeringPID(void)
 {
-    if (steerSet.aogVersion == 0) {
-        //Proportional
-        pValue = steerSet.Kp * steerAngleError * steerSet.Ko;
+    //Proportional only
+    pValue = Set.Kp * steerAngleError;
+    pwmDrive = (int)pValue;
 
-        /* //Derivative
-         dError = steerAngleError - lastLastError;
-         dValue = steerSet.Kd * (dError) * steerSet.Ko;
+    errorAbs = abs(steerAngleError);
+    float newMax = 0;
 
-         //save history of errors
-         lastLastError = lastError;
-         lastError = steerAngleError;
-        */
-        /*Serial.print(steerSet.Kp); Serial.print(":Kp  Ko: "); Serial.print(steerSet.Ko);
-        Serial.print(" steerAngleError: "); Serial.println(steerAngleError);
-        Serial.print(" min PWM: "); Serial.print(steerSet.minPWMValue);
-       */
-        drive = pValue;// + dValue;
-        pwmDrive = (constrain(drive, -255, 255));
-
-        //add throttle factor so no delay from motor resistance.
-        if (pwmDrive < 0) pwmDrive -= steerSet.minPWMValue;
-        else if (pwmDrive > 0) pwmDrive += steerSet.minPWMValue;
-
-        if (pwmDrive > 255) pwmDrive = 255;
-        if (pwmDrive < -255) pwmDrive = -255;
-        //Serial.print(" PWM value: "); Serial.println(pwmDrive);
+    if (errorAbs < Set.MotorSlowDriveDegrees)
+    {
+        newMax = (errorAbs * highLowPerDeg) + Set.lowPWM;
     }
-    else {
-        //Proportional only
-        pValue = steerSet.Kp * steerAngleError;
-        pwmDrive = (int)pValue;
+    else newMax = Set.highPWM;
 
-        errorAbs = abs(steerAngleError);
-        float newMax = 0;
+    //add min throttle factor so no delay from motor resistance.
+    if (pwmDrive < 0) pwmDrive -= Set.minPWM;
+    else if (pwmDrive > 0) pwmDrive += Set.minPWM;
 
-        if (errorAbs < steerSet.MotorSlowDriveDegrees)
-        {
-            newMax = (errorAbs * highLowPerDeg) + steerSet.deadZone;
-        }
-        else newMax = steerSet.maxPWM;
+    //Serial.print(newMax); //The actual steering angle in degrees
+    //Serial.print(",");
 
-        //add min throttle factor so no delay from motor resistance.
-        if (pwmDrive < 0) pwmDrive -= steerSet.minPWM;
-        else if (pwmDrive > 0) pwmDrive += steerSet.minPWM;
+ //limit the pwm drive
+    if (pwmDrive > newMax) pwmDrive = newMax;
+    if (pwmDrive < -newMax) pwmDrive = -newMax;
 
-        //Serial.print(newMax); //The actual steering angle in degrees
-        //Serial.print(",");
-
-     //limit the pwm drive
-        if (pwmDrive > newMax) pwmDrive = newMax;
-        if (pwmDrive < -newMax) pwmDrive = -newMax;
-
-        if (steerSet.MotorDriveDirection) pwmDrive *= -1;
-        if (steerSet.debugmode) { Serial.print("PWM for output: ");  Serial.println(pwmDrive); }
-    }
+    if (Set.MotorDriveDirection) pwmDrive *= -1;
+    if (Set.debugmode) { Serial.print("PWM for output: ");  Serial.println(pwmDrive); }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -62,7 +33,7 @@ void calcSteeringPID(void)
 //---------------------------------------------------------------------
 void motorDrive(void) 
 {
-  switch (steerSet.output_type) {
+  switch (Set.output_type) {
     case 1:
       motorDrive_Cytron();
       break;

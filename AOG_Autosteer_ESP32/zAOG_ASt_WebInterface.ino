@@ -1,6 +1,5 @@
 // definitions and variables for webinterface
-char HTML_String[20000];
-int action;
+char HTML_String[40000];
 
 #define ACTION_LoadDefaultVal   1
 #define ACTION_RESTART          2
@@ -12,16 +11,16 @@ int action;
 char output_driver_tab[5][22] = { "None", "Cytron MD30 + SWM", "IBT_2 +SWM", "IBT_2 +PWM Valve", "IBT_2 +Danfoss Valve" };
 
 // Radiobutton analog input
-char was_input_tab[3][25] = { "Arduino/ESP direct", "ADS 1115 single", "ADS 1115 differential" };
+char was_input_tab[3][25] = { "direct to ESP PIN", "ADS 1115 single", "ADS 1115 differential" };
 
 // Radiobutton IMU Heading Unit
-char imu_type_tab[2][10] = { "None", "BNO 055" };
+char imu_type_tab[3][10] = { "None", "BNO 055","CMPS14" };
 
 // Radiobutton Inclinometer
 char inclino_type_tab[3][50] = { "None", "MMA 8452 at address 1C (adr PIN open)" ,"MMA 8452 at address 1D (adr PIN to GND)"};
 
 // Radiobutton Steerswitch
-char steersw_type_tab[5][15] = { "Switch High", "Switch Low", "Toggle Button", "Analog Buttons","" };
+char steersw_type_tab[6][22] = { "Switch High", "Switch Low", "Toggle Button", "Analog Buttons","none (AOG controlled)","" };
 
 // Radiobutton Workswitch
 char worksw_type_tab[4][8] = { "None", "Digital", "Analog", "" };
@@ -32,33 +31,64 @@ char worksw_invert_tab[2][15] = { "not inverted", "inverted" };
 // Radiobutton Encoder
 char encoder_type_tab[2][11] = { "None", "Installed" };
 
+
+
+//-------------------------------------------------------------------------------------------------
+//7. Maerz 2021
+
+void doWebinterface(void* pvParameters) {
+	for (;;) {
+		WiFi_Server.handleClient(); //does the Webinterface
+		if (WebIOTimeOut < millis() + long((Set.timeoutWebIO * 60000)) - 3000) {//not called in the last 10 sec
+			vTaskDelay(1000);
+		}
+		else {
+			vTaskDelay(100);
+		}
+		if ((now > WebIOTimeOut) && (Set.timeoutWebIO != 255)) {
+			WebIORunning = false;
+			WiFi_Server.close();
+			Serial.println("closing Webinterface task");
+			delay(1);
+			vTaskDelete(NULL);
+			delay(1);
+		}
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+//7. Maerz 2021
+
+void handleRoot() {
+	make_HTML01();
+	WiFi_Server.sendHeader("Connection", "close");
+	WiFi_Server.send(200, "text/html", HTML_String);
+	WebIOTimeOut = millis() + long((Set.timeoutWebIO * 60000));
+	if (Set.debugmode) {
+		Serial.println("Webpage root"); Serial.print("Timeout WebIO: "); Serial.println(WebIOTimeOut);
+	}
+	process_Request();
+}
+
 //-------------------------------------------------------------------------------------------------
 //10. Mai 2020
 
-void StartServer() {
+void WiFiStartServer() {
 
-	/*return index page which is stored in serverIndex */
-	server.on("/", HTTP_GET, []() {
-		make_HTML01();
-		server.sendHeader("Connection", "close");
-		server.send(200, "text/html", HTML_String);
-		if (steerSet.debugmode) { Serial.println("Webpage root"); }
-		process_Request();
-		make_HTML01();
-		server.sendHeader("Connection", "close");
-		server.send(200, "text/html", HTML_String);
+	WiFi_Server.on("/", HTTP_GET, []() {handleRoot(); });
+
+	//file selection for firmware update
+	WiFi_Server.on("/serverIndex", HTTP_GET, []() {
+		WiFi_Server.sendHeader("Connection", "close");
+		WiFi_Server.send(200, "text/html", serverIndex);
 		});
-	server.on("/serverIndex", HTTP_GET, []() {
-		server.sendHeader("Connection", "close");
-		server.send(200, "text/html", serverIndex);
-		});
-	/*handling uploading firmware file */
-	server.on("/update", HTTP_POST, []() {
-		server.sendHeader("Connection", "close");
-		server.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
+	//handling uploading firmware file 
+	WiFi_Server.on("/update", HTTP_POST, []() {
+		WiFi_Server.sendHeader("Connection", "close");
+		WiFi_Server.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
 		ESP.restart();
 		}, []() {
-			HTTPUpload& upload = server.upload();
+			HTTPUpload& upload = WiFi_Server.upload();
 			if (upload.status == UPLOAD_FILE_START) {
 				Serial.printf("Update: %s\n", upload.filename.c_str());
 				if (!Update.begin(UPDATE_SIZE_UNKNOWN)) { //start with max available size
@@ -66,7 +96,7 @@ void StartServer() {
 				}
 			}
 			else if (upload.status == UPLOAD_FILE_WRITE) {
-				/* flashing firmware to ESP*/
+				// flashing firmware to ESP
 				if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
 					Update.printError(Serial);
 				}
@@ -81,9 +111,9 @@ void StartServer() {
 			}
 		});
 
-	server.onNotFound(handleNotFound);
+	WiFi_Server.onNotFound(handleNotFound);
 
-	server.begin();
+	WiFi_Server.begin();
 }
 
 //---------------------------------------------------------------------
@@ -91,166 +121,266 @@ void StartServer() {
 //---------------------------------------------------------------------
 void process_Request()
 {
-	action = 0;
-	if (steerSet.debugmode) { Serial.print("From webinterface: number of arguments: "); Serial.println(server.args()); }
-	for (byte n = 0; n < server.args(); n++) {
-		if (steerSet.debugmode) {
-			Serial.print("argName "); Serial.print(server.argName(n));
-			Serial.print(" val: "); Serial.println(server.arg(n));
+	int temInt = 0;
+	double temDoub = 0.0;
+
+	if (Set.debugmode) { Serial.print("From webinterface: number of arguments: "); Serial.println(WiFi_Server.args()); }
+	for (byte n = 0; n < WiFi_Server.args(); n++) {
+		if (Set.debugmode) {
+			Serial.print("argName "); Serial.print(WiFi_Server.argName(n));
+			Serial.print(" val: "); Serial.println(WiFi_Server.arg(n));
 		}
-		if (server.argName(n) == "ACTION") {
-			action = int(server.arg(n).toInt());
-			if (steerSet.debugmode) { Serial.print("Action found: "); Serial.println(action); }
+		if (WiFi_Server.argName(n) == "ACTION") {
+			temInt = int(WiFi_Server.arg(n).toInt());
+			if (Set.debugmode) { Serial.print("Action found: "); Serial.println(temInt); }
 		}
-		if (action != ACTION_RESTART) { EEprom_unblock_restart(); }
-		if (action == ACTION_LoadDefaultVal) {
-			if (steerSet.debugmode) { Serial.println("load default settings from EEPROM"); }
+		if (temInt != ACTION_RESTART) { EEprom_unblock_restart(); }
+		if (temInt == ACTION_LoadDefaultVal) {
+			if (Set.debugmode) { Serial.println("load default settings from EEPROM"); }
 			EEprom_read_default();
 			delay(2);
 		}
 		//save changes
-		if (server.argName(n) == "Save") {
-			if (steerSet.debugmode) { Serial.println("Save button pressed in webinterface"); }
+		if (WiFi_Server.argName(n) == "Save") {
+			if (Set.debugmode) { Serial.println("Save button pressed in webinterface"); }
 			EEprom_write_all();
 		}
 
-		if (server.argName(n) == "SSID_MY") {
-			for (int i = 0; i < 24; i++) steerSet.ssid[i] = 0x00;
-			int tempInt = server.arg(n).length() + 1;
-			server.arg(n).toCharArray(steerSet.ssid, tempInt);
+		if (WiFi_Server.argName(n) == "SSID_MY1") {
+			for (int i = 0; i < 24; i++) Set.ssid1[i] = 0x00;
+			int tempInt = WiFi_Server.arg(n).length() + 1;
+			WiFi_Server.arg(n).toCharArray(Set.ssid1, tempInt);
 		}
-		if (server.argName(n) == "Password_MY") {
-			for (int i = 0; i < 24; i++) steerSet.password[i] = 0x00;
-			int tempInt = server.arg(n).length() + 1;
-			server.arg(n).toCharArray(steerSet.password, tempInt);
+		if (WiFi_Server.argName(n) == "Password_MY1") {
+			for (int i = 0; i < 24; i++) Set.password1[i] = 0x00;
+			int tempInt = WiFi_Server.arg(n).length() + 1;
+			WiFi_Server.arg(n).toCharArray(Set.password1, tempInt);
 		}
-		if (server.argName(n) == "timeoutRout") {
-			argVal = server.arg(n).toInt();
-			if ((argVal >= 20) && (argVal <= 1000)) { steerSet.timeoutRouter = int(argVal); }
+		if (WiFi_Server.argName(n) == "timeoutRout") {
+			argVal = WiFi_Server.arg(n).toInt();
+			if ((argVal >= 20) && (argVal <= 1000)) { Set.timeoutRouter = int(argVal); }
 		}
-		if (server.argName(n) == "aogVer") {
-			argVal = server.arg(n).toInt();
-			if ((argVal >= 0) && (argVal <= 255)) { steerSet.aogVersion = byte(argVal); }
+		if (WiFi_Server.argName(n) == "aogVer") {
+			argVal = WiFi_Server.arg(n).toInt();
+			if ((argVal >= 0) && (argVal <= 255)) {
+				Set.aogVersion = byte(argVal);
+				//write PGN to output sentence	
+				if (Set.aogVersion == 17) {
+					steerToAOG[0] = FromAOGSentenceHeader[2];
+					steerToAOG[1] = steerDataToAOGHeader;  //same PGN as V4.6 or higher
+					DataToAOGLength = steerDataSentenceToAOGLengthV17;
+				}
+				else {
+					steerToAOG[0] = FromAOGSentenceHeader[0];   //0x80
+					steerToAOG[1] = FromAOGSentenceHeader[1];   //0x81
+					steerToAOG[2] = FromAOGSentenceHeader[2];   //0x7F
+					steerToAOG[3] = steerDataToAOGHeader;
+					steerToAOG[4] = steerDataSentenceToAOGLength - 6; //length of data = all - header - length - CRC
+					DataToAOGLength = steerDataSentenceToAOGLength;
+				}
+			}
 		}
-		if (server.argName(n) == "DataTransfVia") {
-			steerSet.DataTransVia = byte(server.arg(n).toInt());
-			/*
-			argVal = server.arg(n).toInt();			
-			if (argVal == 0) steerSet.DataTransVia = 0;
-			else if (argVal == 1) steerSet.DataTransVia = 1;
-			else if (argVal == 4) steerSet.DataTransVia = 4;*/
+		if (WiFi_Server.argName(n) == "DataTransfVia") {
+			temInt = WiFi_Server.arg(n).toInt();
+			if ((temInt <= 20) && (temInt >= 0)) { Set.DataTransVia = byte(temInt); }
+			if (Set.DataTransVia == 10) {
+				if (Eth_connect_step == 255) {
+					Eth_connect_step = 10;
+					xTaskCreate(Eth_handle_connection, "Core1EthConnectHandle", 3072, NULL, 1, &taskHandle_Eth_connect);
+					delay(500);
+				}
+			}
+			if (Set.DataTransVia < 5) {//USB
+				if (!USBDataTaskRunning) {
+					xTaskCreate(getDataFromAOGUSB, "DataFromAOGHandleUSB", 5000, NULL, 1, &taskHandle_DataFromAOGUSB);
+					delay(500);
+				}
+				if (WiFiDataTaskRunning) { vTaskDelete(taskHandle_DataFromAOGWiFi); delay(5); WiFiDataTaskRunning = false; }
+				if (EthDataTaskRunning) { vTaskDelete(taskHandle_DataFromAOGEth); delay(5); EthDataTaskRunning = false; }
+			}
+			else {
+				if (Set.DataTransVia < 10) {//WiFi UDP
+					if (!WiFiDataTaskRunning) {
+						xTaskCreate(getDataFromAOGWiFi, "DataFromAOGHandleWiFi", 5000, NULL, 1, &taskHandle_DataFromAOGWiFi);
+						delay(500);
+					}
+					if (USBDataTaskRunning) { vTaskDelete(taskHandle_DataFromAOGUSB); delay(5); USBDataTaskRunning = false; }
+					if (EthDataTaskRunning) { vTaskDelete(taskHandle_DataFromAOGEth); delay(5); EthDataTaskRunning = false; }
+				}
+				else {
+					if (Set.DataTransVia == 10) {//Ethernet UDP
+						if (!EthDataTaskRunning) {
+							xTaskCreate(getDataFromAOGEth, "DataFromAOGHandleEth", 5000, NULL, 1, &taskHandle_DataFromAOGEth);
+							delay(500);
+						}
+						if (WiFiDataTaskRunning) { vTaskDelete(taskHandle_DataFromAOGWiFi); delay(5); WiFiDataTaskRunning = false; }
+						if (USBDataTaskRunning) { vTaskDelete(taskHandle_DataFromAOGUSB); delay(5); USBDataTaskRunning = false; }
+					}
+				}
+			}
 		}
-		if (server.argName(n) == "OUTPUT_TYPE") { steerSet.output_type = byte(server.arg(n).toInt()); }
-		if (server.argName(n) == "invMotor") {
-			if (server.arg(n) == "true") { steerSet.MotorDriveDirection = 1; }
-			else { steerSet.MotorDriveDirection = 0; }
+		if (WiFi_Server.argName(n) == "OUTPUT_TYPE") { Set.output_type = byte(WiFi_Server.arg(n).toInt()); }
+		if (WiFi_Server.argName(n) == "invMotor") {
+			if (WiFi_Server.arg(n) == "true") { Set.MotorDriveDirection = 1; }
+			else { Set.MotorDriveDirection = 0; }
 		}
-		if (server.argName(n) == "PWMFreq") {
-			argVal = int(server.arg(n).toInt());
-			if ((argVal <= 20000) && (argVal >= 20)) { steerSet.PWMOutFrequ = int(argVal); }
+		if (WiFi_Server.argName(n) == "PWMFreq") {
+			argVal = int(WiFi_Server.arg(n).toInt());
+			if ((argVal <= 20000) && (argVal >= 20)) { Set.PWMOutFrequ = int(argVal); }
 		}
-		if (server.argName(n) == "MotSlow") {
-			argVal = server.arg(n).toInt();
-			if ((argVal <= 20) && (argVal >= 1)) { steerSet.MotorSlowDriveDegrees = byte(argVal); }
+		if (WiFi_Server.argName(n) == "MotSlow") {
+			argVal = WiFi_Server.arg(n).toInt();
+			if ((argVal <= 20) && (argVal >= 1)) { Set.MotorSlowDriveDegrees = byte(argVal); }
 		}
 
-		if (server.argName(n) == "INPUT_TYPE") { steerSet.input_type = byte(server.arg(n).toInt()); }
-		if (server.argName(n) == "AckermFix") { steerSet.AckermanFix = byte(server.arg(n).toInt()); }
-		if (server.argName(n) == "invWAS") {
-			if (server.arg(n) == "true") { steerSet.Invert_WAS = 1; }
-			else { steerSet.Invert_WAS = 0; }
+		if (WiFi_Server.argName(n) == "INPUT_TYPE") { Set.WASType = byte(WiFi_Server.arg(n).toInt()); }
+		if (WiFi_Server.argName(n) == "AckermFix") { Set.AckermanFix = byte(WiFi_Server.arg(n).toInt()); }
+		if (WiFi_Server.argName(n) == "invWAS") {
+			if (WiFi_Server.arg(n) == "true") { Set.InvertWAS = 1; }
+			else { Set.InvertWAS = 0; }
 		}
-		if (action == ACTION_SET_WAS_ZERO) {
-			steerSet.SteerPosZero = actualSteerPos; // >zero< Funktion Set Steer Angle to 0
-			steerSet.steeringPositionZero = actualSteerPos;
+		if (temInt == ACTION_SET_WAS_ZERO) {
+			Set.WebIOSteerPosZero = actualSteerPosRAW; // >zero< Funktion Set Steer Angle to 0
 			EEprom_write_all();
 		}
-		if (server.argName(n) == "IMU_TYPE") {
-			steerSet.BNOInstalled = byte(server.arg(n).toInt());
-			if (!steerSet.BNOInstalled) imu_initialized = 0;
+		if (WiFi_Server.argName(n) == "IMU_TYPE") {
+			Set.IMUType = byte(WiFi_Server.arg(n).toInt());
+			assignGPIOs_start_extHardware();
 		}
-		if (server.argName(n) == "INCLINO_TYPE") {
-			steerSet.InclinometerInstalled = byte(server.arg(n).toInt());
-			//init MMA
-			if (steerSet.InclinometerInstalled == 1) {
-				MMAinitialized = MMA1C.init();
-				delay(10);
-
-				if (MMAinitialized)
-				{
-					MMA1C.setDataRate(MMA_800hz);
-					MMA1C.setRange(MMA_RANGE_8G);
-					MMA1C.setHighPassFilter(false);
-					if (steerSet.debugmode) { Serial.println("MMA init OK"); }
-				}
-				else if (steerSet.debugmode) { Serial.println("MMA init fails!!"); }
-			}
-			if (steerSet.InclinometerInstalled == 2) {
-				MMAinitialized = MMA1D.init();
-				delay(10);
-
-				if (MMAinitialized)
-				{
-					MMA1D.setDataRate(MMA_800hz);
-					MMA1D.setRange(MMA_RANGE_8G);
-					MMA1D.setHighPassFilter(false);
-					if (steerSet.debugmode) { Serial.println("MMA init OK"); }
-				}
-				else if (steerSet.debugmode) { Serial.println("MMA init fails!!"); }
-			}
+		if (WiFi_Server.argName(n) == "INCLINO_TYPE") {
+			Set.MMAInstalled = byte(WiFi_Server.arg(n).toInt());
+			assignGPIOs_start_extHardware();
+		}		
+		if (WiFi_Server.argName(n) == "MMAAxis") { Set.UseMMA_X_Axis = byte(WiFi_Server.arg(n).toInt()); }
+		if (WiFi_Server.argName(n) == "rollMaxChan") {
+			argVal = WiFi_Server.arg(n).toInt();
+			if ((argVal >= 1) && (argVal <= 50)) { Set.MMA_roll_MAX_STEP = byte(argVal); }
 		}
-		if (server.argName(n) == "MMAAxis") { steerSet.UseMMA_X_Axis = byte(server.arg(n).toInt()); }
-		if (server.argName(n) == "rollMaxChan") {
-			argVal = server.arg(n).toInt();
-			if ((argVal >= 1) && (argVal <= 50)) { steerSet.roll_MAX_STEP = byte(argVal); }
+		if (WiFi_Server.argName(n) == "invRoll") {
+			if (WiFi_Server.arg(n) == "true") { Set.InvertRoll = 1; }
+			else { Set.InvertRoll = 0; }
 		}
-		if (server.argName(n) == "invRoll") {
-			if (server.arg(n) == "true") { steerSet.InvertRoll = 1; }
-			else { steerSet.InvertRoll = 0; }
-		}
-		if (action == ACTION_SET_INCL_ZERO) {
+		if (temInt == ACTION_SET_INCL_ZERO) {
 			int roll_avg = 0;
 			for (int i = 0; i < 16; i++) {
 				roll_avg += x_;
 				delay(200);
 			}
-			if (steerSet.InvertRoll == 1) { roll_avg = 0 - roll_avg; }
-			steerSet.roll_corr = roll_avg >> 4;
+			if (Set.InvertRoll == 1) { roll_avg = 0 - roll_avg; }
+			Set.roll_corr = roll_avg >> 4;
 			EEprom_write_all();
 		}
-		if (server.argName(n) == "ENC_TYPE") { steerSet.ShaftEncoder = byte(server.arg(n).toInt()); }
-		if (server.argName(n) == "ENC_COUNTS") { steerSet.pulseCountMax = byte(server.arg(n).toInt()); }
-		if (server.argName(n) == "SSWITCH_TYPE") { steerSet.SteerSwitch = byte(server.arg(n).toInt()); }
-		if (server.argName(n) == "RSWITCH_TYPE") { steerSet.SteerRemoteSwitch = byte(server.arg(n).toInt()); }
-		if (server.argName(n) == "WSWITCH_TYPE") { steerSet.WorkSW_mode = byte(server.arg(n).toInt()); }
-		if (server.argName(n) == "invWoSw") { 
-			if (server.arg(n) == "true") { steerSet.Invert_WorkSW = 1; }
-			else { steerSet.Invert_WorkSW = 0; }
+		if (WiFi_Server.argName(n) == "ENC_TYPE") { Set.ShaftEncoder = byte(WiFi_Server.arg(n).toInt()); }
+		if (WiFi_Server.argName(n) == "ENC_COUNTS") { Set.pulseCountMax = byte(WiFi_Server.arg(n).toInt()); }
+		if (WiFi_Server.argName(n) == "SSWITCH_TYPE") { 
+			Set.SteerSwitchType = byte(WiFi_Server.arg(n).toInt());
+			if (Set.SteerSwitchType == 4) {Set.SteerSwitchType = 255;}//none
 		}
-		if (action == ACTION_SET_WS_THRESHOLD) {
+	//	if (WiFi_Server.argName(n) == "RSWITCH_TYPE") { Set.SteerRemoteSwitch = byte(WiFi_Server.arg(n).toInt()); }
+		if (WiFi_Server.argName(n) == "WSWITCH_TYPE") { Set.WorkSW_mode = byte(WiFi_Server.arg(n).toInt()); }
+		if (WiFi_Server.argName(n) == "invWoSw") {
+			if (WiFi_Server.arg(n) == "true") { Set.Invert_WorkSW = 1; }
+			else { Set.Invert_WorkSW = 0; }
+		}
+		if (temInt == ACTION_SET_WS_THRESHOLD) {
 			unsigned int WSThres_avg = 0;
 			for (int i = 0; i < 8; i++) {
-				WSThres_avg += analogRead(steerSet.WORKSW_PIN);
+				WSThres_avg += analogRead(Set.WORKSW_PIN);
 				delay(100);
 			}
-			steerSet.WorkSW_Threshold = WSThres_avg >> 3;
+			Set.WorkSW_Threshold = WSThres_avg >> 3;
 			EEprom_write_all();
 		}
-		if (server.argName(n) == "MinSpeed") { steerSet.autoSteerMinSpeed4 = byte(server.arg(n).toInt()); }
-		if (server.argName(n) == "MaxSpeed") {
-			argVal = byte(server.arg(n).toInt());
-			if ((argVal >= 10) && (argVal <= 30)) {
-				steerSet.autosteerMaxSpeed4 = byte(argVal * 4);
-			}
+		if (WiFi_Server.argName(n) == "MinSpeed") {
+			temDoub = WiFi_Server.arg(n).toDouble();
+			if ((temDoub < 3) && (temDoub >= 0)) { Set.autoSteerMinSpeed = float(temDoub); }
 		}
-		if (server.argName(n) == "debugmode") {
-			if (server.arg(n) == "true") { steerSet.debugmode = true; }
-			else { steerSet.debugmode = false; }
+		if (WiFi_Server.argName(n) == "MaxSpeed") {
+			temDoub = WiFi_Server.arg(n).toDouble();
+			if ((temDoub <= 30) && (temDoub >= 5)) { Set.autoSteerMaxSpeed = float(temDoub); }
+		}
+		if (WiFi_Server.argName(n) == "WiFiIP0") {
+			temInt = WiFi_Server.arg(n).toInt();
+			Set.WiFi_myip[0] = byte(temInt);
+		}
+		if (WiFi_Server.argName(n) == "WiFiIP1") {
+			temInt = WiFi_Server.arg(n).toInt();
+			Set.WiFi_myip[1] = byte(temInt);
+		}
+		if (WiFi_Server.argName(n) == "WiFiIP2") {
+			temInt = WiFi_Server.arg(n).toInt();
+			Set.WiFi_myip[2] = byte(temInt);
+		}
+		if (WiFi_Server.argName(n) == "WiFiIP3") {
+			temInt = WiFi_Server.arg(n).toInt();
+			Set.WiFi_myip[3] = byte(temInt);
+		}
+		if (WiFi_Server.argName(n) == "WiFiIPDest") {
+			temInt = WiFi_Server.arg(n).toInt();
+			Set.WiFi_ipDest_ending = byte(temInt);
 		}
 
+		if (WiFi_Server.argName(n) == "EthIP0") {
+			temInt = WiFi_Server.arg(n).toInt();
+			Set.Eth_myip[0] = byte(temInt);
+		}
+		if (WiFi_Server.argName(n) == "EthIP1") {
+			temInt = WiFi_Server.arg(n).toInt();
+			Set.Eth_myip[1] = byte(temInt);
+		}
+		if (WiFi_Server.argName(n) == "EthIP2") {
+			temInt = WiFi_Server.arg(n).toInt();
+			Set.Eth_myip[2] = byte(temInt);
+		}
+		if (WiFi_Server.argName(n) == "EthIP3") {
+			temInt = WiFi_Server.arg(n).toInt();
+			Set.Eth_myip[3] = byte(temInt);
+		}
+		if (WiFi_Server.argName(n) == "EthStatIP") {
+			temInt = WiFi_Server.arg(n).toInt();
+			if (temInt == 1) { Set.Eth_static_IP = true; }
+			else { Set.Eth_static_IP = false; }
+		}
+		if (WiFi_Server.argName(n) == "EthIPDest") {
+			temInt = WiFi_Server.arg(n).toInt();
+			Set.Eth_ipDest_ending = byte(temInt);
+		}
+		if (WiFi_Server.argName(n) == "EthMac0") {
+			temInt = WiFi_Server.arg(n).toInt();
+			Set.Eth_mac[0] = byte(temInt);
+		}
+		if (WiFi_Server.argName(n) == "EthMac1") {
+			temInt = WiFi_Server.arg(n).toInt();
+			Set.Eth_mac[1] = byte(temInt);
+		}
+		if (WiFi_Server.argName(n) == "EthMac2") {
+			temInt = WiFi_Server.arg(n).toInt();
+			Set.Eth_mac[2] = byte(temInt);
+		}
+		if (WiFi_Server.argName(n) == "EthMac3") {
+			temInt = WiFi_Server.arg(n).toInt();
+			Set.Eth_mac[3] = byte(temInt);
+		}
+		if (WiFi_Server.argName(n) == "EthMac4") {
+			temInt = WiFi_Server.arg(n).toInt();
+			Set.Eth_mac[4] = byte(temInt);
+		}
+		if (WiFi_Server.argName(n) == "EthMac5") {
+			temInt = WiFi_Server.arg(n).toInt();
+			Set.Eth_mac[5] = byte(temInt);
+		}
+		if (WiFi_Server.argName(n) == "debugmode") {
+			if (WiFi_Server.arg(n) == "true") { Set.debugmode = true; }
+			else { Set.debugmode = false; }
+		}
+		if (WiFi_Server.argName(n) == "debugmodeDatFromAOG") {
+			if (WiFi_Server.arg(n) == "true") { Set.debugmodeDataFromAOG = true; }
+			else { Set.debugmodeDataFromAOG = false; }
+		}
+		
 
-		if (action == ACTION_RESTART) {
-			Serial.println("reboot ESP32: selected by webinterface"); 
+		if (temInt == ACTION_RESTART) {
+			Serial.println("reboot ESP32: selected by webinterface");
 			EEprom_block_restart();//prevents from restarting, when webpage is reloaded. Is set to 0, when other ACTION than restart is called
 			delay(1000);
 #if HardwarePlatform == 0
@@ -288,11 +418,13 @@ void make_HTML01() {
 	//strcat( HTML_String, "<meta http-equiv=\"refresh\" content=\"10\">");
 	strcat(HTML_String, "<style>divbox {background-color: lightgrey;width: 200px;border: 5px solid red;padding:10px;margin: 10px;}</style>");
 	strcat(HTML_String, "</head>");
-	strcat(HTML_String, "<body bgcolor=\"#66b3ff\">");
+	strcat(HTML_String, "<body bgcolor=\"#ffcf00\">");//66b3ff
 	strcat(HTML_String, "<font color=\"#000000\" face=\"VERDANA,ARIAL,HELVETICA\">");
 	strcat(HTML_String, "<h1>AG Autosteer ESP config page</h1>");
-	strcat(HTML_String, "by WEder/coffeetrac and MTZ8302<br>");
-	strcat(HTML_String, "ver 4.3  -  16. Juni 2020 with OTA firmware update + send 2x<br><br><hr>");
+	strcat(HTML_String, "Version ");
+	strcati(HTML_String, vers_nr);
+	strcat(HTML_String, VersionTXT);
+	strcat(HTML_String, "<br><hr>");
 
 	//---------------------------------------------------------------------------------------------  
 	//load values of INO setup zone
@@ -317,15 +449,15 @@ void make_HTML01() {
 	strcat(HTML_String, "<h2>WiFi Network Client Access Data</h2>");
 	strcat(HTML_String, "<form>");
 	strcat(HTML_String, "</b>If access to networks fails, an accesspoint will be created:<br>SSID: <b>");
-	strcat(HTML_String, steerSet.ssid_ap);
+	strcat(HTML_String, Set.ssid_ap);
 	strcat(HTML_String, "</b>     with no password<br><br><table>");
 	set_colgroup(250, 300, 150, 0, 0);
 
 	strcat(HTML_String, "<tr>");
 	strcat(HTML_String, "<td><b>Network SSID:</b></td>");
 	strcat(HTML_String, "<td>");
-	strcat(HTML_String, "<input type=\"text\" onchange=\"sendVal('/?SSID_MY='+this.value)\" style= \"width:200px\" name=\"SSID_MY\" maxlength=\"22\" Value =\"");
-	strcat(HTML_String, steerSet.ssid);
+	strcat(HTML_String, "<input type=\"text\" onchange=\"sendVal('/?SSID_MY1='+this.value)\" style= \"width:200px\" name=\"SSID_MY1\" maxlength=\"22\" Value =\"");
+	strcat(HTML_String, Set.ssid1);
 	strcat(HTML_String, "\"></td>");
 
 	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
@@ -334,8 +466,8 @@ void make_HTML01() {
 	strcat(HTML_String, "<tr>");
 	strcat(HTML_String, "<td><b>Password:</b></td>");
 	strcat(HTML_String, "<td>");
-	strcat(HTML_String, "<input type=\"text\" onchange=\"sendVal('/?Password_MY='+this.value)\" style= \"width:200px\" name=\"Password_MY\" maxlength=\"22\" Value =\"");
-	strcat(HTML_String, steerSet.password);
+	strcat(HTML_String, "<input type=\"text\" onchange=\"sendVal('/?Password_MY1='+this.value)\" style= \"width:200px\" name=\"Password_MY1\" maxlength=\"22\" Value =\"");
+	strcat(HTML_String, Set.password1);
 	strcat(HTML_String, "\"></td>");
 	strcat(HTML_String, "</tr>");
 
@@ -344,12 +476,13 @@ void make_HTML01() {
 	strcat(HTML_String, "<td colspan=\"3\">time, trying to connect to network</td></tr>");
 	strcat(HTML_String, "<td colspan=\"3\">after time has passed access point is opened</td></tr>");
 	strcat(HTML_String, "<tr><td><b>Timeout (s):</b></td><td><input type = \"number\" onchange=\"sendVal('/?timeoutRout='+this.value)\" name = \"timeoutRout\" min = \"20\" max = \"1000\" step = \"1\" style= \"width:200px\" value = \"");// placeholder = \"");
-	strcati(HTML_String, steerSet.timeoutRouter);
+	strcati(HTML_String, Set.timeoutRouter);
 	strcat(HTML_String, "\"></td>");
+	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
 	strcat(HTML_String, "</tr>");
 
 	strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
-	strcat(HTML_String, "<tr><td colspan=\"2\"><b>Restart NTRIP client for changes to take effect</b></td>");
+	strcat(HTML_String, "<tr><td colspan=\"2\"><b>Reboot ESP32 for changes to take effect</b></td>");
 	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?ACTION=");
 	strcati(HTML_String, ACTION_RESTART);
 	strcat(HTML_String, "')\" style= \"width:120px\" value=\"Restart\"></button></td>");
@@ -364,14 +497,14 @@ void make_HTML01() {
 
 	strcat(HTML_String, "<h2>AOG Version number</h2>");
 	strcat(HTML_String, "<form>");
-	strcat(HTML_String, "<b>If version number send by autosteer doesn't fit to AOG, AOG won't start.</b><br>");
+	strcat(HTML_String, "<b>For AgOpenGPS version 4.3 set 17, for V 4.6 and above set 20</b><br>");
 	strcat(HTML_String, "AOG 4.3.10 = 4 + 3 + 10 = 17<br><br><table>");
 	set_colgroup(250, 300, 150, 0, 0);
 
 	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td colspan=\"3\">for 4.1 and before set 0</td></tr>");
+	//strcat(HTML_String, "<td colspan=\"3\">for 4.1 and before set 0</td></tr>");
 	strcat(HTML_String, "<tr><td><b>AOG Version code</b></td><td><input type = \"number\"  onchange=\"sendVal('/?aogVer='+this.value)\" name = \"aogVer\" min = \"0\" max = \"255\" step = \"1\" style= \"width:200px\" value = \"");// placeholder = \"");
-	strcati(HTML_String, steerSet.aogVersion);
+	strcati(HTML_String, Set.aogVersion);
 	strcat(HTML_String, "\"></td>");
 
 	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
@@ -382,43 +515,43 @@ void make_HTML01() {
 	strcat(HTML_String, "</form>");
 	strcat(HTML_String, "<br><hr>");
 
-	//-----------------------------------------------------------------------------------------		
-	// Data transfer via USB/Wifi 
-	strcat(HTML_String, "<h2>USB or WiFi data transfer</h2>");
+	//---------------------------------------------------------------------------------------------  
+   // Data transfer via USB/Wifi 
+	strcat(HTML_String, "<h2>USB, WiFi or Ethernet data transfer</h2>");
 	strcat(HTML_String, "<form>");
 	strcat(HTML_String, "<table>");
-	set_colgroup(300, 250, 150, 0, 0);
-	//0 = USB 10byte / 1 = USB 10 byte 2x / 4 = USB 8 byte / 7 = UDP / 8 = UDP 2x
+	set_colgroup(150, 400, 150, 0, 0);
+
+	//transfer data via 0 = USB / 7 = WiFi UDP / 8 = WiFi UDP 2x / 10 = Ethernet
 	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td>AOG 2019 and before</td><td><input type = \"radio\" onclick=\"sendVal('/?DataTransfVia=4')\" name=\"DataTransfVia\" id=\"JZ\" value=\"4\"");
-	if (steerSet.DataTransVia == 4)strcat(HTML_String, " CHECKED");
-	strcat(HTML_String, "><label for=\"JZ\">USB 8 byte sentence </label></td>");
+	strcat(HTML_String, "<td></td><td><input type = \"radio\" onclick=\"sendVal('/?DataTransfVia=0')\" name=\"DataTransfVia\" id=\"JZ\" value=\"0\"");
+	if (Set.DataTransVia == 0)strcat(HTML_String, " CHECKED");
+	strcat(HTML_String, "><label for=\"JZ\">USB</label></td>");
 	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
 	strcat(HTML_String, "</tr>");
 
 	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td>AOG V4</td><td><input type = \"radio\" onclick=\"sendVal('/?DataTransfVia=0')\" name=\"DataTransfVia\" id=\"JZ\" value=\"0\"");
-	if (steerSet.DataTransVia == 0)strcat(HTML_String, " CHECKED");
-	strcat(HTML_String, "><label for=\"JZ\">USB 10 byte sentence </label></td></tr>");
-
-	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td>AOG V4</td><td><input type = \"radio\" onclick=\"sendVal('/?DataTransfVia=1')\" name=\"DataTransfVia\" id=\"JZ\" value=\"1\"");
-	if (steerSet.DataTransVia == 1)strcat(HTML_String, " CHECKED");
-	strcat(HTML_String, "><label for=\"JZ\">USB 10 byte send 2x </label></td></tr>");
-
-	strcat(HTML_String, "<tr>");
 	strcat(HTML_String, "<td></td><td><input type = \"radio\" onclick=\"sendVal('/?DataTransfVia=7')\" name=\"DataTransfVia\" id=\"JZ\" value=\"7\"");
-	if (steerSet.DataTransVia == 7)strcat(HTML_String, " CHECKED");
+	if (Set.DataTransVia == 7)strcat(HTML_String, " CHECKED");
 	strcat(HTML_String, "><label for=\"JZ\">WiFi (UDP) (default)</label></td></tr>");
 
-	strcat(HTML_String, "<tr>");
+/*	strcat(HTML_String, "<tr>");
 	strcat(HTML_String, "<td></td><td><input type = \"radio\" onclick=\"sendVal('/?DataTransfVia=8')\" name=\"DataTransfVia\" id=\"JZ\" value=\"8\"");
-	if (steerSet.DataTransVia == 8)strcat(HTML_String, " CHECKED");
-	strcat(HTML_String, "><label for=\"JZ\">WiFi (UDP) send 2x</label></td></tr>");
+	if (Set.DataTransVia == 8)strcat(HTML_String, " CHECKED");
+	strcat(HTML_String, "><label for=\"JZ\">WiFi (UDP) send data 2x)</label></td></tr>");
+*/
+	strcat(HTML_String, "<tr>");
+	strcat(HTML_String, "<td></td><td colspan=\"2\"><input type = \"radio\" onclick=\"sendVal('/?DataTransfVia=10')\" name=\"DataTransfVia\" id=\"JZ\" value=\"10\"");
+	if (Set.DataTransVia == 10)strcat(HTML_String, " CHECKED");
+	strcat(HTML_String, "><label for=\"JZ\">Ethernet (UDP) Ethernet hardware needed!!</label></td></tr>");
 
 	strcat(HTML_String, "</table>");
 	strcat(HTML_String, "</form>");
 	strcat(HTML_String, "<br><hr>");
+
+	//---------------------------------------------------------------------------------------------
+
+	//strcat(HTML_String, "<h1>Hardware setup</h1><hr>");
 
 	//-----------------------------------------------------------------------------------------
 	 // Steerswitch Type
@@ -438,7 +571,7 @@ void make_HTML01() {
 		strcat(HTML_String, "\" value=\"");
 		strcati(HTML_String, i);
 		strcat(HTML_String, "\"");
-		if (steerSet.SteerSwitch == i)strcat(HTML_String, " CHECKED");
+		if (Set.SteerSwitchType == i)strcat(HTML_String, " CHECKED");
 		strcat(HTML_String, "><label for=\"JZ");
 		strcati(HTML_String, i);
 		strcat(HTML_String, "\">");
@@ -449,30 +582,13 @@ void make_HTML01() {
 			strcat(HTML_String, "</tr>");
 		}
 	}
-
-	strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
-
-	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td><b>Remote button for</b></td>");
-	strcat(HTML_String, "<td><input onclick=\"sendVal('/?RSWITCH_TYPE=0')\" type = \"radio\" name=\"RSWITCH_TYPE\" id=\"JZ0\" value=\"0\"");
-	if (steerSet.SteerRemoteSwitch == 0)strcat(HTML_String, " CHECKED");
-	strcat(HTML_String, "><label for=\"JZ0\">unused</label></td>");
-	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
-	strcat(HTML_String, "</tr>");
-
-	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td><b>AOG autosteer</b></td>");
-	strcat(HTML_String, "<td><input type = \"radio\" onclick=\"sendVal('/?RSWITCH_TYPE=1')\" name=\"RSWITCH_TYPE\" id=\"JZ1\" value=\"1\"");
-	if (steerSet.SteerRemoteSwitch == 1)strcat(HTML_String, " CHECKED");
-	strcat(HTML_String, "><label for=\"JZ1\">Switch to GND</label></td>");
-	strcat(HTML_String, "</tr>");
-
-	strcat(HTML_String, "<tr><td>Remote switch linked to SteerSW</td>");
-	strcat(HTML_String, "<td><input type = \"radio\" onclick=\"sendVal('/?RSWITCH_TYPE=2')\" name=\"RSWITCH_TYPE\" id=\"JZ2\" value=\"2\"");
-	if (steerSet.SteerRemoteSwitch == 2)strcat(HTML_String, " CHECKED");
-	strcat(HTML_String, "><label for=\"JZ2\"></label>ONLY with steer switch</td>");
-	strcat(HTML_String, "</tr>");
-
+	strcat(HTML_String, "<tr><td> </td>");
+	strcat(HTML_String, "<td><input type = \"radio\" onclick=\"sendVal('/?SSWITCH_TYPE=255')\"name=\"SSWITCH_TYPE\" id=\"JZ255");
+	strcat(HTML_String, "\" value=\"255\"");
+	if (Set.SteerSwitchType == 255)strcat(HTML_String, " CHECKED");
+	strcat(HTML_String, "><label for=\"JZ255\">");
+	strcat(HTML_String, steersw_type_tab[4]);
+	strcat(HTML_String, "</label></td>");
 	strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
 
 	for (int i = 0; i < 3; i++) {
@@ -486,7 +602,7 @@ void make_HTML01() {
 		strcat(HTML_String, "\" value=\"");
 		strcati(HTML_String, i);
 		strcat(HTML_String, "\"");
-		if (steerSet.WorkSW_mode == i)strcat(HTML_String, " CHECKED");
+		if (Set.WorkSW_mode == i)strcat(HTML_String, " CHECKED");
 		strcat(HTML_String, "><label for=\"JZ");
 		strcati(HTML_String, i);
 		strcat(HTML_String, "\">");
@@ -499,7 +615,7 @@ void make_HTML01() {
 
 	//checkbox invert Workswitch
 	strcat(HTML_String, "<tr><td></td><td><input type=\"checkbox\" onclick=\"sendVal('/?invWoSw='+this.checked)\" name=\"invWoSw\" id = \"Part\" value = \"1\" ");
-	if (steerSet.Invert_WorkSW == 1) strcat(HTML_String, "checked ");
+	if (Set.Invert_WorkSW == 1) strcat(HTML_String, "checked ");
 	strcat(HTML_String, "> ");
 	strcat(HTML_String, "<label for =\"Part\"> <b> Invert Workswitch</b></label>");
 	strcat(HTML_String, "</td>");
@@ -511,7 +627,7 @@ void make_HTML01() {
 	strcat(HTML_String, "<tr>");
 	strcat(HTML_String, "<td><br>Analog Workswitch Threshold value</td>");
 	strcat(HTML_String, "<td><divbox align=\"right\"><font size=\"+1\"><b>");
-	strcati(HTML_String, (steerSet.WorkSW_Threshold));
+	strcati(HTML_String, (Set.WorkSW_Threshold));
 	strcat(HTML_String, "</b></font></divbox>0-4095</td>");
 
 	strcat(HTML_String, "<tr>");
@@ -544,7 +660,7 @@ void make_HTML01() {
 		strcat(HTML_String, "\" value=\"");
 		strcati(HTML_String, i);
 		strcat(HTML_String, "\"");
-		if (steerSet.ShaftEncoder == i)strcat(HTML_String, " CHECKED");
+		if (Set.ShaftEncoder == i)strcat(HTML_String, " CHECKED");
 		strcat(HTML_String, "><label for=\"JZ");
 		strcati(HTML_String, i);
 		strcat(HTML_String, "\">");
@@ -559,7 +675,7 @@ void make_HTML01() {
 	strcat(HTML_String, "<tr>");
 	strcat(HTML_String, "<td><b>Counts to turn off Autosteer</b></td>");
 	strcat(HTML_String, "<td><input type = \"number\" onchange=\"sendVal('/?ENC_COUNTS='+this.value)\" name = \"ENC_COUNTS\" min = \"0\" max = \"100\" step = \"1\" style= \"width:200px\" value = \"");// placeholder = \"");
-	strcati(HTML_String, steerSet.pulseCountMax);
+	strcati(HTML_String, Set.pulseCountMax);
 	strcat(HTML_String, "\"></td>");
 
 	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
@@ -588,7 +704,7 @@ void make_HTML01() {
 		strcat(HTML_String, "\" value=\"");
 		strcati(HTML_String, i);
 		strcat(HTML_String, "\"");
-		if (steerSet.output_type == i)strcat(HTML_String, " CHECKED");
+		if (Set.output_type == i)strcat(HTML_String, " CHECKED");
 		strcat(HTML_String, "><label for=\"JZ");
 		strcati(HTML_String, i);
 		strcat(HTML_String, "\">");
@@ -603,7 +719,7 @@ void make_HTML01() {
 	strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
 	//checkbox invert Motor
 	strcat(HTML_String, "<tr><td></td><td><input type=\"checkbox\" onclick=\"sendVal('/?invMotor='+this.checked)\" name=\"invMotor\" id = \"Part\" value = \"1\" ");
-	if (steerSet.MotorDriveDirection == 1) strcat(HTML_String, "checked ");
+	if (Set.MotorDriveDirection == 1) strcat(HTML_String, "checked ");
 	strcat(HTML_String, "> ");
 	strcat(HTML_String, "<label for =\"Part\"> <b> Invert Motor direction</b></label>");
 	strcat(HTML_String, "</td>");
@@ -614,7 +730,7 @@ void make_HTML01() {
 	strcat(HTML_String, "<tr>");
 	strcat(HTML_String, "<td><b>PWM output frequency</b></td>");
 	strcat(HTML_String, "<td><input type = \"number\" onchange=\"sendVal('/?PWMFreq='+this.value)\" name = \"PWMFreq\" min = \"20\" max = \"20000\" step = \"10\" style= \"width:200px\" value = \"");// placeholder = \"");
-	strcati(HTML_String, steerSet.PWMOutFrequ);
+	strcati(HTML_String, Set.PWMOutFrequ);
 	strcat(HTML_String, "\"></td>");
 	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
 	strcat(HTML_String, "</tr>");
@@ -627,7 +743,7 @@ void make_HTML01() {
 	strcat(HTML_String, "<td colspan=\"3\"><b>Motor/Valve is driving slower if steer angle error is less then x degrees:</b></td></tr>");
 	strcat(HTML_String, "<td>slow drive range (degr):</td>");
 	strcat(HTML_String, "<td><input type = \"number\" onchange=\"sendVal('/?MotSlow='+this.value)\" name = \"MotSlow\" min = \"1\" max = \"10\" step = \"1\" style= \"width:200px\" value = \"");// placeholder = \"");
-	strcati(HTML_String, steerSet.MotorSlowDriveDegrees);
+	strcati(HTML_String, Set.MotorSlowDriveDegrees);
 	strcat(HTML_String, "\"></td>");
 	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
 	strcat(HTML_String, "</tr>");
@@ -654,7 +770,7 @@ void make_HTML01() {
 		strcat(HTML_String, "\" value=\"");
 		strcati(HTML_String, i);
 		strcat(HTML_String, "\"");
-		if (steerSet.input_type == i)strcat(HTML_String, " CHECKED");
+		if (Set.WASType == i)strcat(HTML_String, " CHECKED");
 		strcat(HTML_String, "><label for=\"JZ");
 		strcati(HTML_String, i);
 		strcat(HTML_String, "\">");
@@ -672,7 +788,7 @@ void make_HTML01() {
 	strcat(HTML_String, "<tr>");
 	strcat(HTML_String, "<td><br>WAS RAW Data</td>");
 	strcat(HTML_String, "<td><divbox align=\"right\"><font size=\"+1\"> <b>");
-	strcati(HTML_String, actualSteerPos);
+	strcati(HTML_String, actualSteerPosRAW);
 	strcat(HTML_String, "</b></font></divbox></td></tr>");
 
 	strcat(HTML_String, "<tr>");
@@ -700,7 +816,7 @@ void make_HTML01() {
 	strcat(HTML_String, "<tr>");
 	strcat(HTML_String, "<td><b>Ackerman fix factor (%)</b></td>");
 	strcat(HTML_String, "<td><input type = \"number\" onchange=\"sendVal('/?AckermFix='+this.value)\" name = \"AckermFix\" min = \"35\" max = \"300\" step = \"1\" style= \"width:200px\" value = \"");// placeholder = \"");
-	strcati(HTML_String, steerSet.AckermanFix);
+	strcati(HTML_String, Set.AckermanFix);
 	strcat(HTML_String, "\"></td>");
 	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
 	strcat(HTML_String, "</tr>");
@@ -714,7 +830,7 @@ void make_HTML01() {
 
 	strcat(HTML_String, "<tr>");
 	strcat(HTML_String, "<td></td><td colspan=\"2\"><input type=\"checkbox\" onclick=\"sendVal('/?invWAS='+this.checked)\" name=\"invWAS\" id = \"Part\" value = \"1\" ");
-	if (steerSet.Invert_WAS == 1) strcat(HTML_String, "checked ");
+	if (Set.InvertWAS == 1) strcat(HTML_String, "checked ");
 	strcat(HTML_String, "> ");
 	strcat(HTML_String, "<label for =\"Part\"><b> Invert wheel angle sensor</b></label>");
 	strcat(HTML_String, "</td>");
@@ -725,40 +841,88 @@ void make_HTML01() {
 	strcat(HTML_String, "<br><hr>");
 
 	//-----------------------------------------------------------------------------------------
-	// min speed selction
+	//speed for autosteer
+
 	strcat(HTML_String, "<h2>Speed range for using autosteer</h2>");
 	strcat(HTML_String, "<form>");
 	strcat(HTML_String, "<table>");
 	set_colgroup(300, 250, 150, 0, 0);
-	for (int i = 4; i > 0; i--) {
+	//min speed
+	strcat(HTML_String, "<tr><td><b>min speed (km/h)</b></td><td><input type = \"number\" onchange=\"sendVal('/?MinSpeed='+this.value)\" name = \"MinSpeed\" min = \"0\" max = \"2\" step = \"0.1\" style= \"width:200px\" value = \"");// placeholder = \"");
+	if (Set.autoSteerMinSpeed < 10) { strcatf(HTML_String, Set.autoSteerMinSpeed, 3, 1); }
+	else {strcatf(HTML_String, Set.autoSteerMinSpeed, 4, 1); }
+	strcat(HTML_String, "\"></td>");
+	//max speed
+	strcat(HTML_String, "<tr><td colspan=\"3\">&nbsp;</td></tr>");
+	strcat(HTML_String, "<tr><td><b>max speed (km/h)</b></td><td><input type = \"number\" onchange=\"sendVal('/?MaxSpeed='+this.value)\" name = \"MaxSpeed\" min = \"10\" max = \"30\" step = \"1\" style= \"width:200px\" value = \"");// placeholder = \"");
+	if (Set.autoSteerMaxSpeed < 10) { strcatf(HTML_String, Set.autoSteerMaxSpeed, 3, 1); }
+	else { strcatf(HTML_String, Set.autoSteerMaxSpeed, 4, 1); }
+	strcat(HTML_String, "\"></td>");
+	strcat(HTML_String, "</table>");
+	strcat(HTML_String, "</form>");
+	strcat(HTML_String, "<br><hr>");
+
+	//-----------------------------------------------------------------------------------------
+	// IMU Heading Unit
+
+	strcat(HTML_String, "<h2>IMU Heading Unit (Compass)</h2>");
+	strcat(HTML_String, "<form>");
+	strcat(HTML_String, "<table>");
+	set_colgroup(300, 250, 150, 0, 0);
+
+	for (int i = 0; i < 3; i++) {
 		strcat(HTML_String, "<tr>");
-		if (i == 4)  strcat(HTML_String, "<td><b>min speed (km/h)</b></td>");
+		if (i == 0)  strcat(HTML_String, "<td><b>Select your IMU type</b></td>");
 		else strcat(HTML_String, "<td> </td>");
-		strcat(HTML_String, "<td><input type = \"radio\" onclick=\"sendVal('/?MinSpeed=");
+		strcat(HTML_String, "<td><input type = \"radio\" onclick=\"sendVal('/?IMU_TYPE=");
 		strcati(HTML_String, i);
-		strcat(HTML_String, "')\" name=\"MinSpeed\" id=\"JZ");
+		strcat(HTML_String, "')\" name=\"IMU_TYPE\" id=\"JZ");
 		strcati(HTML_String, i);
 		strcat(HTML_String, "\" value=\"");
 		strcati(HTML_String, i);
 		strcat(HTML_String, "\"");
-		if (steerSet.autoSteerMinSpeed4 == i)strcat(HTML_String, " CHECKED");
+		if (Set.IMUType == i)strcat(HTML_String, " CHECKED");
 		strcat(HTML_String, "><label for=\"JZ");
 		strcati(HTML_String, i);
-		strcat(HTML_String, "\"> ");
-		strcatf(HTML_String, float(i) / 4);
+		strcat(HTML_String, "\">");
+		strcat(HTML_String, imu_type_tab[i]);
 		strcat(HTML_String, "</label></td>");
-		//strcat(HTML_String, "></td>");
-		if (i == 4) {
-			strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
+		if (i == 0) {
+			strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\"  style= \"width:120px\" value=\"Save\"></button></td>");
 		}
 		strcat(HTML_String, "</tr>");
 	}
-	//max speed
+	strcat(HTML_String, "<tr><td colspan=\"3\">&nbsp;</td></tr>");
 	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td colspan=\"3\">&nbsp;</td></tr>");
-	strcat(HTML_String, "<tr><td><b>max speed (km/h)</b></td><td><input type = \"number\" onchange=\"sendVal('/?MaxSpeed='+this.value)\" name = \"MaxSpeed\" min = \"10\" max = \"30\" step = \"1\" style= \"width:200px\" value = \"");// placeholder = \"");
-	strcati(HTML_String, int((steerSet.autosteerMaxSpeed4 * 0.25) + 0.3));
-	strcat(HTML_String, "\"></td>");
+	strcat(HTML_String, "<td><br>Heading");
+	if (Set.IMUType == 2) { strcat(HTML_String, " from CPMS14"); }
+	if (Set.IMUType == 3) { strcat(HTML_String, " from BNO085"); }
+	strcat(HTML_String, "</td><td><divbox align=\"right\"><font size=\"+1\"><b>");
+	if (heading < 10) { strcatf(HTML_String, heading, 3, 1); }
+	else {
+		if (heading < 100) { strcatf(HTML_String, heading, 4, 1); }
+		else { strcatf(HTML_String, heading, 5, 1); }
+	}
+	strcat(HTML_String, "</b></font></divbox>degree</td>");
+
+	//Refresh button
+	strcat(HTML_String, "<td><input type= \"button\" onclick= \"location.reload()\" style= \"width:120px\" value=\"Refresh\"></button></td>");
+	strcat(HTML_String, "</tr>");
+
+	strcat(HTML_String, "<tr><td colspan=\"3\">&nbsp;</td></tr>");
+	strcat(HTML_String, "<tr>");
+	if (Set.IMUType > 1) {//CMPS BNO085
+		if (Set.IMUType == 2) { strcat(HTML_String, "<td><br>Roll from CMPS14</td>"); }
+		if (Set.IMUType == 3) { strcat(HTML_String, "<td><br>Roll from BNO085</td>"); }
+		strcat(HTML_String, "<td><divbox align=\"right\"><font size=\"+1\"><b>");
+		if (roll < 10) { strcatf(HTML_String, roll, 3, 1); }
+		else {
+			if (roll < 100) { strcatf(HTML_String, roll, 4, 1); }
+			else { strcatf(HTML_String, roll, 5, 1); }
+		}
+		strcat(HTML_String, "</b></font></divbox>degree</td>");
+	}
+
 	strcat(HTML_String, "</table>");
 	strcat(HTML_String, "</form>");
 	strcat(HTML_String, "<br><hr>");
@@ -781,7 +945,7 @@ void make_HTML01() {
 		strcat(HTML_String, "\" value=\"");
 		strcati(HTML_String, i);
 		strcat(HTML_String, "\"");
-		if (steerSet.InclinometerInstalled == i)strcat(HTML_String, " CHECKED");
+		if (Set.MMAInstalled == i)strcat(HTML_String, " CHECKED");
 		strcat(HTML_String, "><label for=\"JZ");
 		strcati(HTML_String, i);
 		strcat(HTML_String, "\">");
@@ -794,121 +958,231 @@ void make_HTML01() {
 	}
 
 	strcat(HTML_String, "</tr><tr><td colspan=\"3\">&nbsp;</td></tr>");
-	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td><br>Tilt Angle</td>");
-	strcat(HTML_String, "<td><divbox align=\"right\"><font size=\"+1\"><b>");
-	strcatf(HTML_String, (XeRoll / 16));
-	strcat(HTML_String, "</b></font></divbox>degree</td>");
+	if (Set.MMAInstalled != 0) {
+		strcat(HTML_String, "<tr><td><br>Tilt Angle</td>");
+		strcat(HTML_String, "<td><divbox align=\"right\"><font size=\"+1\"><b>");
+		if ((roll / 16) < 10) { strcatf(HTML_String, (roll / 16), 3, 1); }
+		else { strcatf(HTML_String, (roll / 16), 4, 1); }
+		strcat(HTML_String, "</b></font></divbox>degree</td>");
 
-	//Refresh button
-	strcat(HTML_String, "<td><input type= \"button\" onclick= \"location.reload()\" style= \"width:120px\" value=\"Refresh\"></button></td>");
-	strcat(HTML_String, "</tr>");
+		//Refresh button
+		strcat(HTML_String, "<td><input type= \"button\" onclick= \"location.reload()\" style= \"width:120px\" value=\"Refresh\"></button></td>");
+		strcat(HTML_String, "</tr>");
 
-	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td><b>Calibrate Inclinometer</b></td>");
-	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?ACTION=");
-	strcati(HTML_String, ACTION_SET_INCL_ZERO);
-	strcat(HTML_String, "')\" style= \"width:200px\" value=\"ZERO NOW\"></button></td>");
-	strcat(HTML_String, "<td>Tilt Calibration takes place on a flat area with no slope</td></tr>");
-
-	strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
-	// Checkbox invert roll
-	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td></td><td><input type=\"checkbox\" onclick=\"sendVal('/?invRoll='+this.checked)\" name=\"invRoll\" id = \"Part\" value = \"1\" ");
-	if (steerSet.InvertRoll == 1) strcat(HTML_String, "checked ");
-	strcat(HTML_String, "> ");
-	strcat(HTML_String, "<label for =\"Part\"><b> Invert roll</b></label>");
-	strcat(HTML_String, "</td>");
-	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
-
-	// radio button use x/y axis
-	strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
-	strcat(HTML_String, "<tr> <td colspan=\"3\"><b>MMA orientation:</b></td> </tr>");
-	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td>MMA uses</td><td><input type = \"radio\" onclick=\"sendVal('/?MMAAxis=1')\" name=\"MMAAxis\" id=\"JZ\" value=\"1\"");
-	if (steerSet.UseMMA_X_Axis == 1)strcat(HTML_String, " CHECKED");
-	strcat(HTML_String, "><label for=\"JZ\">X axis (default)</label></td>");
-	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
-	strcat(HTML_String, "</tr>");
-
-	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td></td><td><input type = \"radio\" onclick=\"sendVal('/?MMAAxis=0')\" name=\"MMAAxis\" id=\"JZ\" value=\"0\"");
-	if (steerSet.UseMMA_X_Axis == 0)strcat(HTML_String, " CHECKED");
-	strcat(HTML_String, "><label for=\"JZ\">Y axis</label></td></tr>");
-
-	//roll max change
-	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td colspan=\"3\">&nbsp;</td></tr>");
-	strcat(HTML_String, "<tr><td><b>MMA Filter setting:</b></td></tr>");
-	strcat(HTML_String, "<tr><td>maximum roll change per 100ms:</td><td><input type = \"number\" onchange=\"sendVal('/?rollMaxChan='+this.value)\" name = \"rollMaxChan\" min = \"1\" max = \"40\" step = \"1\" style= \"width:200px\" value = \"");// placeholder = \"");
-	strcati(HTML_String, steerSet.roll_MAX_STEP);
-	strcat(HTML_String, "\"></td></tr>");
-
-	strcat(HTML_String, "</table>");
-	strcat(HTML_String, "</form>");
-	strcat(HTML_String, "<br><hr>");
-
-	//-----------------------------------------------------------------------------------------
-	// IMU Heading Unit
-
-	strcat(HTML_String, "<h2>IMU Heading Unit (Compass)</h2>");
-	strcat(HTML_String, "<form>");
-	strcat(HTML_String, "<table>");
-	set_colgroup(300, 250, 150, 0, 0);
-
-	for (int i = 0; i < 2; i++) {
 		strcat(HTML_String, "<tr>");
-		if (i == 0)  strcat(HTML_String, "<td><b>Select your IMU type</b></td>");
-		else strcat(HTML_String, "<td> </td>");
-		strcat(HTML_String, "<td><input type = \"radio\" onclick=\"sendVal('/?IMU_TYPE=");
-		strcati(HTML_String, i);
-		strcat(HTML_String, "')\" name=\"IMU_TYPE\" id=\"JZ");
-		strcati(HTML_String, i);
-		strcat(HTML_String, "\" value=\"");
-		strcati(HTML_String, i);
-		strcat(HTML_String, "\"");
-		if (steerSet.BNOInstalled == i)strcat(HTML_String, " CHECKED");
-		strcat(HTML_String, "><label for=\"JZ");
-		strcati(HTML_String, i);
-		strcat(HTML_String, "\">");
-		strcat(HTML_String, imu_type_tab[i]);
-		strcat(HTML_String, "</label></td>");
-		if (i == 0) {
-			strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\"  style= \"width:120px\" value=\"Save\"></button></td>");
-			strcat(HTML_String, "</tr>");
-		}
+		strcat(HTML_String, "<td><b>Calibrate Inclinometer</b></td>");
+		strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?ACTION=");
+		strcati(HTML_String, ACTION_SET_INCL_ZERO);
+		strcat(HTML_String, "')\" style= \"width:200px\" value=\"ZERO NOW\"></button></td>");
+		strcat(HTML_String, "<td>Tilt Calibration takes place on a flat area with no slope</td></tr>");
+
+		strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
+		// Checkbox invert roll
+		strcat(HTML_String, "<tr>");
+		strcat(HTML_String, "<td></td><td><input type=\"checkbox\" onclick=\"sendVal('/?invRoll='+this.checked)\" name=\"invRoll\" id = \"Part\" value = \"1\" ");
+		if (Set.InvertRoll == 1) strcat(HTML_String, "checked ");
+		strcat(HTML_String, "> ");
+		strcat(HTML_String, "<label for =\"Part\"><b> Invert roll</b></label>");
+		strcat(HTML_String, "</td>");
+		strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
+
+		// radio button use x/y axis
+		strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
+		strcat(HTML_String, "<tr> <td colspan=\"3\"><b>MMA orientation:</b></td> </tr>");
+		strcat(HTML_String, "<tr>");
+		strcat(HTML_String, "<td>MMA uses</td><td><input type = \"radio\" onclick=\"sendVal('/?MMAAxis=1')\" name=\"MMAAxis\" id=\"JZ\" value=\"1\"");
+		if (Set.UseMMA_X_Axis == 1)strcat(HTML_String, " CHECKED");
+		strcat(HTML_String, "><label for=\"JZ\">X axis (default)</label></td>");
+		strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
+		strcat(HTML_String, "</tr>");
+
+		strcat(HTML_String, "<tr>");
+		strcat(HTML_String, "<td></td><td><input type = \"radio\" onclick=\"sendVal('/?MMAAxis=0')\" name=\"MMAAxis\" id=\"JZ\" value=\"0\"");
+		if (Set.UseMMA_X_Axis == 0)strcat(HTML_String, " CHECKED");
+		strcat(HTML_String, "><label for=\"JZ\">Y axis</label></td></tr>");
+
+		//roll max change
+		strcat(HTML_String, "<tr>");
+		strcat(HTML_String, "<td colspan=\"3\">&nbsp;</td></tr>");
+		strcat(HTML_String, "<tr><td><b>MMA Filter setting:</b></td></tr>");
+		strcat(HTML_String, "<tr><td>maximum roll change per 100ms:</td><td><input type = \"number\" onchange=\"sendVal('/?rollMaxChan='+this.value)\" name = \"rollMaxChan\" min = \"1\" max = \"40\" step = \"1\" style= \"width:200px\" value = \"");// placeholder = \"");
+		strcati(HTML_String, Set.MMA_roll_MAX_STEP);
+		strcat(HTML_String, "\"></td></tr>");
 	}
 
-	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td><br>Heading</td>");
-	strcat(HTML_String, "<td><divbox align=\"right\"><font size=\"+1\"><b>");
-	strcatf(HTML_String, (heading));
-	strcat(HTML_String, "</b></font></divbox>degree</td>");
-
-	//Refresh button
-	strcat(HTML_String, "<td><input type= \"button\" onclick= \"location.reload()\" style= \"width:120px\" value=\"Refresh\"></button></td>");
-	strcat(HTML_String, "</tr>");
-
-
 	strcat(HTML_String, "</table>");
 	strcat(HTML_String, "</form>");
 	strcat(HTML_String, "<br><hr>");
+	
+
+	//---------------------------------------------------------------------------------------------
+
+	//strcat(HTML_String, "<h1>Network setup</h1><hr>");
+
+	//---------------------------------------------------------------------------------------------  
+	// WiFi IP settings 
+	strcat(HTML_String, "<h2>WiFi IP settings</h2>");
+	strcat(HTML_String, "<form>");
+	//IP
+	strcat(HTML_String, "<b>IP address for WiFi</b><br>When using DHCP the last number is set as IP from here, the first 3 numbers are set by DHCP.<br>");
+	strcat(HTML_String, "<b>Default for last number is 77, it's also the address of the Webinterface.</b>");
+	strcat(HTML_String, "<table>");
+	set_colgroup(150, 50, 50, 50, 50);
+	strcat(HTML_String, "<tr><td>IP address</td><td><input type = \"number\"  onchange=\"sendVal('/?WiFiIP0='+this.value)\" name = \"WiFiIP\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+	strcati(HTML_String, Set.WiFi_myip[0]);
+	strcat(HTML_String, "\"></td>");
+	strcat(HTML_String, "<td><input type = \"number\"  onchange=\"sendVal('/?WiFiIP1='+this.value)\" name = \"WiFiIP\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+	strcati(HTML_String, Set.WiFi_myip[1]);
+	strcat(HTML_String, "\"></td>");
+	strcat(HTML_String, "<td><input type = \"number\"  onchange=\"sendVal('/?WiFiIP2='+this.value)\" name = \"WiFiIP\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+	strcati(HTML_String, Set.WiFi_myip[2]);
+	strcat(HTML_String, "\"></td>");
+	strcat(HTML_String, "<td><input type = \"number\"  onchange=\"sendVal('/?WiFiIP3='+this.value)\" name = \"WiFiIP\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+	strcati(HTML_String, Set.WiFi_myip[3]);
+	strcat(HTML_String, "\"></td></table><br>");
+
+	//IP destination    
+	strcat(HTML_String, "<table>");
+	set_colgroup(250, 300, 150, 0, 0);
+	strcat(HTML_String, "<tr><td colspan=\"2\"><b>IP address of destination</b></td>");
+	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
+	strcat(HTML_String, "</tr></table><table>");
+	strcat(HTML_String, "Destination's IP address, the first 3 numbers are set by DHCP, or as above.<br>");
+	strcat(HTML_String, "<b>Use 255 to send to every device in network (default).</b> Use IP of your Computer, if you don't have a router and fixed IPs");
+	strcat(HTML_String, "<table>");
+	set_colgroup(150, 50, 50, 50, 50);
+	strcat(HTML_String, "<tr><td>IP address destination</td><td>xxx</td><td>xxx</td><td>xxx<td><input type = \"number\"  onchange=\"sendVal('/?WiFiIPDest='+this.value)\" name = \"WiFiIPDest\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+	strcati(HTML_String, Set.WiFi_ipDest_ending);
+	strcat(HTML_String, "\"></td></table><br><hr>");
+
+	//---------------------------------------------------------------------------------------------  
+	// Ethernet settings 
+	strcat(HTML_String, "<h2>Ethernet settings</h2>");
+	strcat(HTML_String, "<form>");
+	strcat(HTML_String, "<table>");
+	set_colgroup(150, 400, 150, 0, 0);
+
+	//use DHCP/static IP radio button
+	strcat(HTML_String, "<tr>");
+	strcat(HTML_String, "<td></td><td><input type = \"radio\" onclick=\"sendVal('/?EthStatIP=0')\" name=\"EthStatIP\" id=\"JZ\" value=\"0\"");
+	if (Set.Eth_static_IP == false)strcat(HTML_String, " CHECKED");
+	strcat(HTML_String, "><label for=\"JZ\">use DHCP (default)</label></td>");
+	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
+	strcat(HTML_String, "</tr>");
+
+	strcat(HTML_String, "<tr>");
+	strcat(HTML_String, "<td></td><td><input type = \"radio\" onclick=\"sendVal('/?EthStatIP=1')\" name=\"EthStatIP\" id=\"JZ\" value=\"1\"");
+	if (Set.Eth_static_IP == true)strcat(HTML_String, " CHECKED");
+	strcat(HTML_String, "><label for=\"JZ\">use fixed IP from below</label></td></tr>");
+
+	strcat(HTML_String, "</table><br>");
+
+	//IP
+	strcat(HTML_String, "<b>IP address for Ethernet</b><br>When using DHCP the last number is set as IP from here, the first 3 numbers are set by DHCP.<br>");
+	strcat(HTML_String, "<b>Default for last number is 78.</b>");
+	strcat(HTML_String, "<table>");
+	set_colgroup(150, 50, 50, 50, 50);
+	strcat(HTML_String, "<tr><td>IP address</td><td><input type = \"number\"  onchange=\"sendVal('/?EthIP0='+this.value)\" name = \"EthIP\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+	strcati(HTML_String, Set.Eth_myip[0]);
+	strcat(HTML_String, "\"></td>");
+	strcat(HTML_String, "<td><input type = \"number\"  onchange=\"sendVal('/?EthIP1='+this.value)\" name = \"EthIP\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+	strcati(HTML_String, Set.Eth_myip[1]);
+	strcat(HTML_String, "\"></td>");
+	strcat(HTML_String, "<td><input type = \"number\"  onchange=\"sendVal('/?EthIP2='+this.value)\" name = \"EthIP\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+	strcati(HTML_String, Set.Eth_myip[2]);
+	strcat(HTML_String, "\"></td>");
+	strcat(HTML_String, "<td><input type = \"number\"  onchange=\"sendVal('/?EthIP3='+this.value)\" name = \"EthIP\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+	strcati(HTML_String, Set.Eth_myip[3]);
+	strcat(HTML_String, "\"></td></table><br>");
+
+	//IP destination
+	strcat(HTML_String, "<table>");
+	set_colgroup(250, 300, 150, 0, 0);
+	strcat(HTML_String, "<tr><td colspan=\"2\"><b>IP address of destination</b></td>");
+	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
+	strcat(HTML_String, "</tr></table><table>");
+	strcat(HTML_String, "Destination's IP address, the first 3 numbers are set by DHCP, or as above.<br>");
+	strcat(HTML_String, "<b>Use 255 to send to every device in network (default).</b> Use IP of your Computer, if you don't have a router and fixed IPs");
+	strcat(HTML_String, "<table>");
+	set_colgroup(150, 50, 50, 50, 50);
+	strcat(HTML_String, "<tr><td>IP address destination</td><td>xxx</td><td>xxx</td><td>xxx<td><input type = \"number\"  onchange=\"sendVal('/?EthIPDest='+this.value)\" name = \"EthIPDest\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+	strcati(HTML_String, Set.Eth_ipDest_ending);
+	strcat(HTML_String, "\"></td></table><br>");
+
+	//mac
+	strcat(HTML_String, "<b>mac address of Ethernet hardware</b><br>Type in the mac address of you Ethernet shield.<br>");
+	strcat(HTML_String, "<table>");
+	set_colgroup(150, 50, 50, 50, 50, 50, 50);
+	strcat(HTML_String, "<tr><td>mac address</td><td><input type = \"number\"  onchange=\"sendVal('/?EthMac0='+this.value)\" name = \"EthMac\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+	strcati(HTML_String, Set.Eth_mac[0]);
+	strcat(HTML_String, "\"></td>");
+	strcat(HTML_String, "<td><input type = \"number\"  onchange=\"sendVal('/?EthMac1='+this.value)\" name = \"EthMac\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+	strcati(HTML_String, Set.Eth_mac[1]);
+	strcat(HTML_String, "\"></td>");
+	strcat(HTML_String, "<td><input type = \"number\"  onchange=\"sendVal('/?EthMac2='+this.value)\" name = \"EthMac\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+	strcati(HTML_String, Set.Eth_mac[2]);
+	strcat(HTML_String, "\"></td>");
+	strcat(HTML_String, "<td><input type = \"number\"  onchange=\"sendVal('/?EthMac3='+this.value)\" name = \"EthMac\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+	strcati(HTML_String, Set.Eth_mac[3]);
+	strcat(HTML_String, "\"></td>");
+	strcat(HTML_String, "<td><input type = \"number\"  onchange=\"sendVal('/?EthMac4='+this.value)\" name = \"EthMac\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+	strcati(HTML_String, Set.Eth_mac[4]);
+	strcat(HTML_String, "\"></td>");
+	strcat(HTML_String, "<td><input type = \"number\"  onchange=\"sendVal('/?EthMac5='+this.value)\" name = \"EthMac\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+	strcati(HTML_String, Set.Eth_mac[5]);
+	strcat(HTML_String, "\"></td></table>");
+
+
+	strcat(HTML_String, "</form>");
+	strcat(HTML_String, "<br><hr>");
+
 
 	//-------------------------------------------------------------
 	// Checkbox debugmode
-	strcat(HTML_String, "<h2>Debugmode</h2>");
+	strcat(HTML_String, "<h2>Debug</h2><hr>");
+
+	//debug values
+	strcat(HTML_String, "Settingsdata from AOG: Ackermann: ");
+	strcati(HTML_String, Set.AckermanFix);
+	strcat(HTML_String, " sensorCounts: ");
+	strcati(HTML_String, Set.steerSensorCounts);
+	//strcat(HTML_String, " WASoffset: ");
+	//strcati(HTML_String, Set.wasOffset);
+	strcat(HTML_String, "<br>minPWM: ");
+	strcati(HTML_String, Set.minPWM);
+	strcat(HTML_String, " lowPWM: ");
+	strcati(HTML_String, Set.lowPWM);
+	strcat(HTML_String, " high PWM: ");
+	strcati(HTML_String, Set.highPWM);
+	strcat(HTML_String, "<br><br>");
+
+	strcat(HTML_String, "Steerdata from AOG: Guidance Status: ");
+	strcati(HTML_String, guidanceStatus);
+	strcat(HTML_String, " speed: ");
+	strcati(HTML_String, gpsSpeed);
+	strcat(HTML_String, "<br>SteerAngleSetPoint: ");
+	strcati(HTML_String, steerAngleSetPoint);
+	strcat(HTML_String, " SectGrFromAOG[0]: ");
+	strcati(HTML_String, SectGrFromAOG[0]);
+	strcat(HTML_String, " SectGrFromAOG[1]: ");
+	strcati(HTML_String, SectGrFromAOG[1]);
+	strcat(HTML_String, "<br><hr>");
+
 	strcat(HTML_String, "<form>");
 	strcat(HTML_String, "<table>");
-	set_colgroup(300, 250, 150, 0, 0);
+	set_colgroup(150, 400, 150, 0, 0);
 
-	strcat(HTML_String, "<tr> <td colspan=\"3\">debugmode sends messages to USB serial</td> </tr>");
-	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td></td><td><input type=\"checkbox\" onclick=\"sendVal('/?debugmode='+this.checked)\" name=\"debugmode\" id = \"Part\" value = \"1\" ");
-	if (steerSet.debugmode == 1) strcat(HTML_String, "checked ");
+	strcat(HTML_String, "<tr> <td colspan=\"3\"><b>Debugmode sends messages to USB serial</b></td> </tr>");
+	strcat(HTML_String, "<tr><td></td><td><input type=\"checkbox\" onclick=\"sendVal('/?debugmode='+this.checked)\" name=\"debugmode\" id = \"Part\" value = \"1\" ");
+	if (Set.debugmode == 1) strcat(HTML_String, "checked ");
 	strcat(HTML_String, "> ");
-	strcat(HTML_String, "<label for =\"Part\"> debugmode on</label>");
-	strcat(HTML_String, "</td>");
+	strcat(HTML_String, "<label for =\"Part\"> debugmode on</label></td>");
 	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
+
+	strcat(HTML_String, "<tr><td></td><td><input type=\"checkbox\" onclick=\"sendVal('/?debugmodeDatFromAOG='+this.checked)\" name=\"debugmodeDatFromAOG\" id = \"Part\" value = \"1\" ");
+	if (Set.debugmodeDataFromAOG == 1) strcat(HTML_String, "checked ");
+	strcat(HTML_String, "> ");
+	strcat(HTML_String, "<label for =\"Part\"> debugmode Data From AOG on</label></td></tr>");
 
 	strcat(HTML_String, "</table>");
 	strcat(HTML_String, "</form>");
@@ -976,16 +1250,16 @@ void make_HTML01() {
 void handleNotFound() {
 	String message = "File Not Found\n\n";
 	message += "URI: ";
-	message += server.uri();
+	message += WiFi_Server.uri();
 	message += "\nMethod: ";
-	message += (server.method() == HTTP_GET) ? "GET" : "POST";
+	message += (WiFi_Server.method() == HTTP_GET) ? "GET" : "POST";
 	message += "\nArguments: ";
-	message += server.args();
+	message += WiFi_Server.args();
 	message += "\n";
-	for (uint8_t i = 0; i < server.args(); i++) {
-		message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+	for (uint8_t i = 0; i < WiFi_Server.args(); i++) {
+		message += " " + WiFi_Server.argName(i) + ": " + WiFi_Server.arg(i) + "\n";
 	}
-	server.send(404, "text/plain", message);
+	WiFi_Server.send(404, "text/plain", message);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -998,7 +1272,27 @@ void set_colgroup(int w1, int w2, int w3, int w4, int w5) {
 	set_colgroup1(w4);
 	set_colgroup1(w5);
 	strcat(HTML_String, "</colgroup>");
-
+}
+void set_colgroup(int w1, int w2, int w3, int w4, int w5, int w6) {
+	strcat(HTML_String, "<colgroup>");
+	set_colgroup1(w1);
+	set_colgroup1(w2);
+	set_colgroup1(w3);
+	set_colgroup1(w4);
+	set_colgroup1(w5);
+	set_colgroup1(w6);
+	strcat(HTML_String, "</colgroup>");
+}
+void set_colgroup(int w1, int w2, int w3, int w4, int w5, int w6, int w7) {
+	strcat(HTML_String, "<colgroup>");
+	set_colgroup1(w1);
+	set_colgroup1(w2);
+	set_colgroup1(w3);
+	set_colgroup1(w4);
+	set_colgroup1(w5);
+	set_colgroup1(w6);
+	set_colgroup1(w7);
+	strcat(HTML_String, "</colgroup>");
 }
 //------------------------------------------------------------------------------------------
 void set_colgroup1(int ww) {
@@ -1010,10 +1304,10 @@ void set_colgroup1(int ww) {
 
 
 //---------------------------------------------------------------------
-void strcatf(char* tx, float f) {
+void strcatf(char* tx, float f, byte leng, byte dezim) {
 	char tmp[8];
 
-	dtostrf(f, 6, 2, tmp);
+	dtostrf(f, leng, dezim, tmp);//f,6,2,tmp
 	strcat(tx, tmp);
 }
 //---------------------------------------------------------------------
