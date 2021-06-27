@@ -3,9 +3,10 @@
 // ready for AOG V4.3 + V5.x Version
 // PINs for GormR central unit PCB (V1.8) see GitHub https://github.com/GormR/HW_for_AgOpenGPS
 // by MTZ8302 see GitHub https://github.com/mtz8302 and Youtube Ma Ha MTZ8302 https://www.youtube.com/channel/UCv44DlUXQJKbQjzaOUssVgw
+// some small additions by hagre 
 
 byte vers_nr = 44;
-char VersionTXT[120] = " - 16. April 2021 by MTZ8302<br>(V4.3 + V5 ready, CMPS/BNO085 and Ethernet support)";
+char VersionTXT[120] = " - 27. Juni 2021 by MTZ8302 + hagre <br>(V4.3 + V5 ready, CMPS/BNO085 and Ethernet support, +customSetting File)";
 
 //##########################################################################################################
 //### Setup Zone ###########################################################################################
@@ -19,153 +20,321 @@ char VersionTXT[120] = " - 16. April 2021 by MTZ8302<br>(V4.3 + V5 ready, CMPS/B
 //to do: 230 not called in V20, steerPostionZero from AOG is ignorred, only zero button in WebIO working 
 
 
-#define useLED_BUILTIN  0	          // some ESP board have a build in LED, some not. Here it's the same funtion as the WiFi LED
+//##########################################################################################################
+//If you want to use your personal Settings including the PINs definition for compiling (for custom Bord designs,...) uncomment the following
+//#define USE_CUSTOM_SETTINGS
+//##########################################################################################################
 
+#ifdef USE_CUSTOM_SETTINGS
+  #include "mySettings.h"
+#else
+// Default Values/Settings by MTZ8302
+  
+//general settings
+  #define EEPROM_CLEAR false                    //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again
+
+  #define AOG_VERSION 20                        // Version number for version check 4.3.10 = 4+3+10 = 17  
+  #define DATA_TRANS_VIA 7                      // transfer data via 0 = USB / 7 = WiFi UDP / 10 = Ethernet UDP
+
+  #define DEBUG_MODE false
+  #define DEBUG_MODE_DATA_FROM_AOG false
+  
+  #define USE_LED_BUILTIN  0                     // some ESP board have a build in LED, some not. Here it's the same funtion as the WiFi LED
+
+//Features
+  //MOTOR/OUTPUT  
+  #define OUTPUT_TYPE 2                         // set to 1  if you want to use Stering Motor + Cytron MD30C Driver
+                                                // set to 2  if you want to use Stering Motor + IBT 2  Driver
+                                                // set to 3  if you want to use IBT 2  Driver + PWM 2-Coil Valve
+                                                // set to 4  if you want to use  IBT 2  Driver + Danfoss Valve PVE A/H/M
+  #define MOTOR_DRIVE_DIRECTION 0               // 0 = normal, 1 = inverted
+  #define MOTOR_SLOW_DRIVE_DEGREES 5            // How many degrees before decreasing Max PWM
+  #define PWM_OUT_FREQU 20000                   // PWM frequency for motordriver: 1000Hz:for low heat at PWM device 20000Hz: not hearable
+
+  //WAS
+  #define WAS_TYPE 2                            // 0 = No ADS installed, Wheel Angle Sensor connected directly to ESP at GPIO 36 (pin set below) (attention 3,3V only)
+                                                // 1 = Single Mode of ADS1115 - Sensor Signal at A0 (ADS)
+                                                // 2 = Differential Mode - Connect Sensor GND to A1, Signal to A0
+  #define INVERT_WAS 0                          // set to 1 to Change Direction of Wheel Angle Sensor - to +   
+  #define ACKERMAN_FIX 78                       // if values for left and right are the same: 100                                            
+  
+  //SWITCHES
+  #define STEER_SWITCH_TYPE 1                   // 0 = enable = switch high (3,3V) //1 = enable = switch low(GND) //2 = toggle = button to low(GND)
+                                                // 3 = enable = button to high (3,3V), disable = button to low (GND), neutral = 1,65V
+                                                // 255 = no steer switch, allways on if AOG steering is active
+                                                
+  #define WORSK_SW_MODE 2                       // 0 = disabled // 1 = digital ON/OFF // 2 = analog Value 0...4095 (0 - 3,3V)
+  #define INVERT_WORK_SW 0                      // 0 = Hitch raised -> High    // 1 = Hitch raised -> Low
+  #define WORK_SW_THRESHOLD 1600                // Value for analog hitch level to switch workswitch  (0-4096)
+
+  //AUTOSTEER
+  #define AUTOTSTEER_MIN_SPEED 0.2               // Min speed to use autosteer km/h
+  #define AUTOTSTEER_MAX_SPEED 30                // Max speed to use autosteer km/h
+
+  //IMU/COMPAS
+  #define IMU_TYPE 0                            // 0: none, 1: BNO055 IMU, 2: CMPS14, 3: BNO080 + BNO085 
+  #define INVERT_ROLL 0                         // 0: no, set to 1 to change roll direction
+    //CMPS14  
+    #define I2C_CMPS14_ADDRESS 0x60               // Address of CMPS14 shifted right one bit for arduino wire library
+    #define CMPS14_HEADING_CORRECTION 0.0         // not used at the moment
+    #define CMPS14_ROLL_CORRECTION 0.0            // not used at the moment
+    #define CMPS14_USED_AXIS 0                    // not used at the moment
+  
+    //BNO08x
+    #define I2C_BNO08X_ADDRESS {0x4A,0x4B}        // BNO08x address variables to check where it is
+    #define BNO_HEADING_CORRECTION 0.0            // not used at the moment
+    #define BNO_ROLL_CORRECTION 0.0               // not used at the moment
+    #define BNO_USED_AXIS 0                       // not used at the moment
+  
+    //MMA
+    #define MMA_INSTALLED 0                       // set to 1 if MMA8452 is installed at address 1C (Adr PIN to GND) set to 2 at address 1D (Adr PIN open)
+    #define USE_MMA_X_AXIS 1                      // 1: use X axis (default) 0: use Y axis
+    #define MMA_ROLL_MAX_STEP 10                  // max roll step per loop (5-20) higher = filter less
+
+  //ENCODER  
+  #define SHAFT_ENCODER 0                       // Steering Wheel ENCODER Installed
+  #define PULSE_COUNT_MAX 3                     // Switch off Autosteer after x Pulses from Steering wheel encoder
+
+  //CURRENT SENSOR
+  #define CURRENT_SENSOR 0                      // (not supported at the moment)
+  
+  //PRESSURE_SENSOR
+  #define PRESSURE_SENSOR 0                     // (not supported at the moment)
+
+//NETWORK 
+  //PORTS
+  #define PORT_AUTOST_TO_AOG 5577               // this is port of this module: Autosteer = 5577 IMU = 5566 GPS = 
+  #define PORT_FROM_AOG 8888                    // port to listen for AOG
+  #define PORT_DESTINATION 9999                 // port of AOG that listens
+  
+  //WiFi
+  #define WIFI_SSID "Fendt_209V"                  // WiFi network Client name
+  #define WIFI_PASSWORD ""                      // WiFi network password
+  #define WIFI_SSID_AP "Autosteer_unit_Net"       // name of Access point, if no WiFi found, NO password!!
+  #define WIFI_TIMEOUT_ROUTER 120               // time (seconds) to wait for WIFI access, after that own Access Point starts
+  #define WIFI_TIMEOUT_TIMEOUT_WEBIO 255        // time (min) afterwards webinterface is switched off
+  #define WIFI_MYIP {192, 168, 1, 77}         // autosteer module 
+  #define WIFI_GWIP {192, 168, 1, 1}          // Gateway IP only used if Accesspoint created
+  #define WIFI_IPDEST_ENDING 255                // ending of IP address to send UDP data to
+  #define WIFI_MASK {255, 255, 255, 0}
+  #define WIFI_MYDNS {8, 8, 8, 8}              //optional
+
+  //Ethernet
+  #define ETHERNET_MYIP {192, 168, 1, 78}     // autosteer module 
+  #define ETHERNET_IPDEST_ENDING 255            // ending of IP address to send UDP data to
+  #define ETHERNET_MAC {0x70,0x69,0x69,0x2D,0x30,0x31}
+  #define ETHERNET_STATIC_IP false              // false = use DHPC and set last number to 80 (x.x.x.80) / true = use IP as set above
+
+  //WEBIO
+  #define WEBIO_STEER_POS_ZERO 10300            // first value for steer zero position ADS: 11000 for EPS32 AD PIN: 2048
+
+// IO pins ------------------------------------------------------------------
+  // set to 255 for unused !!!!!
+  
+  //I2C
+  #define SDA_PIN 21;                            // I2C Pins
+  #define SCL_PIN 22;
+
+  //LEDS
+  #define AUTOSTEER_LED_PIN 2                   // light on active autosteer and IBT2
+  #define LED_WIFI_PIN 0                        // light on WiFi connected, flashes on searching Network. If GPIO 0 is used LED must be activ LOW otherwise ESP won't boot
+  #define LED_WIFI_ON_LEVEL LOW                 // HIGH = LED on high, LOW = LED on low
+
+  //RELAYS
+  #define RELAY_PINS {255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255} // (not supported at the moment) relais for section control
+  #define TRAM_PINS {255,255,255}             // (not supported at the moment) relais for tramline control
+  #define RELAYS_ON HIGH                        // HIGH = Relay on high, LOW = Relay on low
+
+  //WAS
+  #define LOCAL_WAS_PIN 36                      // PIN for Wheel Angle Sensor (none, if ADS used)
+  #define LOCAL_WAS_DIFF_GND_PIN 39
+  
+  //SWITCHES
+  #define WORK_SW_PIN 33                        // PIN for workswitch (can be analog or on/off switch see WorkSW_mode)
+  #define STEER_SW_PIN 34                       // Pin for steer button or switch (see SteerSwitchType)
+
+  //ENCODER
+  #define ENC_A_PIN 4                           // Pin for steer encoder, to turn off autosteer if steering wheel is used
+  #define ENC_B_PIN 32                          // Pin for steer encoder, to turn off autosteer if steering wheel is used
+
+  //SERVO
+  #define SERVO_PIN 16                          // (not supported at the moment) Pin for servo to pull motor to steering wheel
+
+  //MOTOR
+  #define LOCAL_PWM_PIN 27                      // PWM Output to motor controller (IBT2 or cytron)
+  #define LOCAL_DIR_PIN 26                      // direction output to motor controller (IBT2 or cytron)
+  
+  //CURRENT SENSOR
+  #define CURRENT_SENSE_PIN 35                  // (not supported at the moment) current sensor for IBT2 to read the force needed to turn steering wheel
+
+  //ETHERNET
+  #define ETHERNET_CS_PIN 5                     // CS PIN with SPI Ethernet hardware  SPI config: MOSI 23 / MISO 19 / CLK18 / CS5
+
+  //CAN BUS
+  #define LOCAL_CAN_RX_PIN 25                   // (not supported at the moment) CAN bus 
+  #define LOCAL_CAN_TX_PIN 17                   // (not supported at the moment)
+
+  //##########################################################################################################
+  //### End of Setup Zone ####################################################################################
+  //##########################################################################################################
+  //filter variables set by AOG via PGN settings sentence
+  #define KO 0.05f                              //overall gain  
+  #define KP 20.0f                              //proportional gain  
+  #define KI 0.001f                             //integral gain
+  #define KD 1.0f                               //derivative gain 
+  #define AOG_STEER_POSITION_ZERO 0
+  #define STEER_SENSOR_COUNTS 100
+  #define ROLL_CORR 200
+  #define MIN_PWM 40
+  #define HIGH_PWM 150
+  #define LOW_PWM 60
+#endif
+ 
+//##########################################################################################################################
+// Do NOT change values below
 
 struct Storage {
 	//WiFi
-	char ssid1[24] = "Fendt_209V";                // WiFi network Client name
-	char password1[24] = "";                      // WiFi network password
-	char ssid_ap[24] = "Autosteer_unit_Net";	  // name of Access point, if no WiFi found, NO password!!
-	uint16_t timeoutRouter = 120;                 // time (seconds) to wait for WIFI access, after that own Access Point starts
-	byte timeoutWebIO = 255;                      // time (min) afterwards webinterface is switched off
+	char ssid1[24] = WIFI_SSID;                      // WiFi network Client name
+	char password1[24] = WIFI_PASSWORD;              // WiFi network password
+	char ssid_ap[24] = WIFI_SSID_AP;	               // name of Access point, if no WiFi found, NO password!!
+	uint16_t timeoutRouter = WIFI_TIMEOUT_ROUTER;    // time (seconds) to wait for WIFI access, after that own Access Point starts
+	byte timeoutWebIO = WIFI_TIMEOUT_TIMEOUT_WEBIO;  // time (min) afterwards webinterface is switched off
 
-	byte WiFi_myip[4] = { 192, 168, 1, 77 };      // autosteer module 
-	byte WiFi_gwip[4] = { 192, 168, 1, 1 };       // Gateway IP only used if Accesspoint created
-	byte WiFi_ipDest_ending = 255;                // ending of IP address to send UDP data to
-	byte mask[4] = { 255, 255, 255, 0 };
-	byte myDNS[4] = { 8, 8, 8, 8 };               //optional
+	byte WiFi_myip[4] = WIFI_MYIP;                   // autosteer module 
+	byte WiFi_gwip[4] = WIFI_GWIP;                   // Gateway IP only used if Accesspoint created
+	byte WiFi_ipDest_ending = WIFI_IPDEST_ENDING;    // ending of IP address to send UDP data to
+	byte mask[4] = WIFI_MASK;
+	byte myDNS[4] = WIFI_MYDNS;                      //optional
 
 	//Ethernet
-	byte Eth_myip[4] = { 192, 168, 1, 78 };       // autosteer module 
-	byte Eth_ipDest_ending = 255;                 // ending of IP address to send UDP data to
-	byte Eth_mac[6] = { 0x70,0x69,0x69,0x2D,0x30,0x31 };
-	bool Eth_static_IP = false;					          // false = use DHPC and set last number to 80 (x.x.x.80) / true = use IP as set above
+	byte Eth_myip[4] = ETHERNET_MYIP;                // autosteer module 
+	byte Eth_ipDest_ending = ETHERNET_IPDEST_ENDING; // ending of IP address to send UDP data to
+	byte Eth_mac[6] = ETHERNET_MAC;
+	bool Eth_static_IP = ETHERNET_STATIC_IP;	       // false = use DHPC and set last number to 80 (x.x.x.80) / true = use IP as set above
 
-	unsigned int PortAutostToAOG = 5577;          // this is port of this module: Autosteer = 5577 IMU = 5566 GPS = 
-	unsigned int PortFromAOG = 8888;              // port to listen for AOG
-	unsigned int PortDestination = 9999;          // port of AOG that listens
+	unsigned int PortAutostToAOG = PORT_AUTOST_TO_AOG; // this is port of this module: Autosteer = 5577 IMU = 5566 GPS = 
+	unsigned int PortFromAOG = PORT_FROM_AOG;          // port to listen for AOG
+	unsigned int PortDestination = PORT_DESTINATION;   // port of AOG that listens
 
 	//general settings
-	uint8_t aogVersion = 20;			                // Version number for version check 4.3.10 = 4+3+10 = 17	
+	uint8_t aogVersion = AOG_VERSION;		               // Version number for version check 4.3.10 = 4+3+10 = 17	
 
-	byte DataTransVia = 7;                        // transfer data via 0 = USB / 7 = WiFi UDP / 10 = Ethernet UDP
+	byte DataTransVia = DATA_TRANS_VIA;                // transfer data via 0 = USB / 7 = WiFi UDP / 10 = Ethernet UDP
 
-	uint8_t output_type = 2;                      // set to 1  if you want to use Stering Motor + Cytron MD30C Driver
-																// set to 2  if you want to use Stering Motor + IBT 2  Driver
-																// set to 3  if you want to use IBT 2  Driver + PWM 2-Coil Valve
-																// set to 4  if you want to use  IBT 2  Driver + Danfoss Valve PVE A/H/M
+	uint8_t output_type = OUTPUT_TYPE;                 // set to 1  if you want to use Stering Motor + Cytron MD30C Driver
+									                                   // set to 2  if you want to use Stering Motor + IBT 2  Driver
+											                     					 // set to 3  if you want to use IBT 2  Driver + PWM 2-Coil Valve
+													                     			 // set to 4  if you want to use  IBT 2  Driver + Danfoss Valve PVE A/H/M
 
 
-	uint16_t PWMOutFrequ = 20000;                 // PWM frequency for motordriver: 1000Hz:for low heat at PWM device 20000Hz: not hearable
+	uint16_t PWMOutFrequ = PWM_OUT_FREQU;              // PWM frequency for motordriver: 1000Hz:for low heat at PWM device 20000Hz: not hearable
 
-	uint8_t	MotorDriveDirection = 0;              // 0 = normal, 1 = inverted
+	uint8_t	MotorDriveDirection = MOTOR_DRIVE_DIRECTION; // 0 = normal, 1 = inverted
 
-	uint8_t MotorSlowDriveDegrees = 5;	          // How many degrees before decreasing Max PWM
+	uint8_t MotorSlowDriveDegrees = MOTOR_SLOW_DRIVE_DEGREES;	// How many degrees before decreasing Max PWM
 
-	uint8_t WASType = 2;                          // 0 = No ADS installed, Wheel Angle Sensor connected directly to ESP at GPIO 36 (pin set below) (attention 3,3V only)
-																// 1 = Single Mode of ADS1115 - Sensor Signal at A0 (ADS)
-																// 2 = Differential Mode - Connect Sensor GND to A1, Signal to A0
+	uint8_t WASType = WAS_TYPE;                          // 0 = No ADS installed, Wheel Angle Sensor connected directly to ESP at GPIO 36 (pin set below) (attention 3,3V only)
+															                       	 // 1 = Single Mode of ADS1115 - Sensor Signal at A0 (ADS)
+														                      		 // 2 = Differential Mode - Connect Sensor GND to A1, Signal to A0
 
-	uint8_t IMUType = 0;                          // 0: none, 1: BNO055 IMU, 2: CMPS14, 3: BNO080 + BNO085
+	uint8_t IMUType = IMU_TYPE;                          // 0: none, 1: BNO055 IMU, 2: CMPS14, 3: BNO080 + BNO085
 
 	//CMPS14	
-	int CMPS14_ADDRESS = 0x60;                    // Address of CMPS14 shifted right one bit for arduino wire library
-	float CMPS14HeadingCorrection = 0.0;		      // not used at the moment
-	float CMPS14RollCorrection = 0.0;		          // not used at the moment
-	uint8_t CMPS14UsedAxis = 0;		                // not used at the moment
+	int CMPS14_ADDRESS = I2C_CMPS14_ADDRESS;                   // Address of CMPS14 shifted right one bit for arduino wire library
+	float CMPS14HeadingCorrection = CMPS14_HEADING_CORRECTION; // not used at the moment
+	float CMPS14RollCorrection = CMPS14_ROLL_CORRECTION;       // not used at the moment
+	uint8_t CMPS14UsedAxis = CMPS14_USED_AXIS;		             // not used at the moment
 
 	// BNO08x
-	uint8_t bno08xAddresses[2] = { 0x4A,0x4B };	  // BNO08x address variables to check where it is
-	float BNOHeadingCorrection = 0.0;		          // not used at the moment
-	float BNORollCorrection = 0.0;		            // not used at the moment
-	uint8_t BNOUsedAxis = 0;		                  // not used at the moment
+	uint8_t bno08xAddresses[2] = I2C_BNO08X_ADDRESS;	    // BNO08x address variables to check where it is
+	float BNOHeadingCorrection = BNO_HEADING_CORRECTION;  // not used at the moment
+	float BNORollCorrection = BNO_ROLL_CORRECTION;	      // not used at the moment
+	uint8_t BNOUsedAxis = BNO_USED_AXIS;	                // not used at the moment
 
 	//MMA
-	uint8_t MMAInstalled = 0;                     // set to 1 if MMA8452 is installed at address 1C (Adr PIN to GND) set to 2 at address 1D (Adr PIN open)
-	uint8_t UseMMA_X_Axis = 1;		                // 1: use X axis (default) 0: use Y axis
-	uint8_t MMA_roll_MAX_STEP = 10;		            // max roll step per loop (5-20) higher = filter less
+	uint8_t MMAInstalled = MMA_INSTALLED;                 // set to 1 if MMA8452 is installed at address 1C (Adr PIN to GND) set to 2 at address 1D (Adr PIN open)
+	uint8_t UseMMA_X_Axis = USE_MMA_X_AXIS;	              // 1: use X axis (default) 0: use Y axis
+	uint8_t MMA_roll_MAX_STEP = MMA_ROLL_MAX_STEP;		    // max roll step per loop (5-20) higher = filter less
 
-	uint8_t InvertRoll = 0;                       // 0: no, set to 1 to change roll direction
-	uint8_t InvertWAS = 0;                        // set to 1 to Change Direction of Wheel Angle Sensor - to + 
+	uint8_t InvertRoll = INVERT_ROLL;                     // 0: no, set to 1 to change roll direction
+	uint8_t InvertWAS = INVERT_WAS;                       // set to 1 to Change Direction of Wheel Angle Sensor - to + 
 
-	uint8_t ShaftEncoder = 0;                     // Steering Wheel ENCODER Installed
-	uint8_t PressureSensor = 0;		        // (not supported at the moment)
-	uint8_t CurrentSensor = 0;		        // (not supported at the moment)
-	uint8_t pulseCountMax = 3;                    // Switch off Autosteer after x Pulses from Steering wheel encoder 
+	uint8_t ShaftEncoder = SHAFT_ENCODER;                 // Steering Wheel ENCODER Installed
+	uint8_t PressureSensor = PRESSURE_SENSOR;		          // (not supported at the moment)
+	uint8_t CurrentSensor = CURRENT_SENSOR;		            // (not supported at the moment)
+	uint8_t pulseCountMax = PULSE_COUNT_MAX;              // Switch off Autosteer after x Pulses from Steering wheel encoder 
 
-	uint16_t WebIOSteerPosZero = 10300;	          // first value for steer zero position ADS: 11000 for EPS32 AD PIN: 2048
+	uint16_t WebIOSteerPosZero = WEBIO_STEER_POS_ZERO;	  // first value for steer zero position ADS: 11000 for EPS32 AD PIN: 2048
 
-	uint8_t AckermanFix = 78;		                  // if values for left and right are the same: 100 
+	uint8_t AckermanFix = ACKERMAN_FIX;		                // if values for left and right are the same: 100 
 
-	uint8_t SteerSwitchType = 1;                  // 0 = enable = switch high (3,3V) //1 = enable = switch low(GND) //2 = toggle = button to low(GND)
-																// 3 = enable = button to high (3,3V), disable = button to low (GND), neutral = 1,65V
-													// 255 = no steer switch, allways on if AOG steering is active
+	uint8_t SteerSwitchType = STEER_SWITCH_TYPE;          // 0 = enable = switch high (3,3V) //1 = enable = switch low(GND) //2 = toggle = button to low(GND)
+																                        // 3 = enable = button to high (3,3V), disable = button to low (GND), neutral = 1,65V
+													                              // 255 = no steer switch, allways on if AOG steering is active
 
-	uint8_t WorkSW_mode = 2;                      // 0 = disabled // 1 = digital ON/OFF // 2 = analog Value 0...4095 (0 - 3,3V)
+	uint8_t WorkSW_mode = WORSK_SW_MODE;                  // 0 = disabled // 1 = digital ON/OFF // 2 = analog Value 0...4095 (0 - 3,3V)
 
-	uint8_t Invert_WorkSW = 0;                    // 0 = Hitch raised -> High    // 1 = Hitch raised -> Low
+	uint8_t Invert_WorkSW = INVERT_WORK_SW;               // 0 = Hitch raised -> High    // 1 = Hitch raised -> Low
 
-	float autoSteerMinSpeed = 0.2;                // Min speed to use autosteer km/h
-	float autoSteerMaxSpeed = 30;                 // Max speed to use autosteer km/h
+	float autoSteerMinSpeed = AUTOTSTEER_MIN_SPEED;       // Min speed to use autosteer km/h
+	float autoSteerMaxSpeed = AUTOTSTEER_MAX_SPEED;       // Max speed to use autosteer km/h
 
-	uint16_t WorkSW_Threshold = 1600;             // Value for analog hitch level to switch workswitch  (0-4096)
+	uint16_t WorkSW_Threshold = WORK_SW_THRESHOLD;        // Value for analog hitch level to switch workswitch  (0-4096)
 
 
 	// IO pins ------------------------------------------------------------------
 
 	// set to 255 for unused !!!!!
-	uint8_t SDA = 21;	                  // I2C Pins
-	uint8_t SCL = 22;
+	uint8_t SDA = SDA_PIN;	                               // I2C Pins
+	uint8_t SCL = SCL_PIN;
 
-	uint8_t AutosteerLED_PIN = 2;       // light on active autosteer and IBT2
-	uint8_t LEDWiFi_PIN = 0;            // light on WiFi connected, flashes on searching Network. If GPIO 0 is used LED must be activ LOW otherwise ESP won't boot
-	uint8_t LEDWiFi_ON_Level = LOW;	    // HIGH = LED on high, LOW = LED on low
+	uint8_t AutosteerLED_PIN = AUTOSTEER_LED_PIN;          // light on active autosteer and IBT2
+	uint8_t LEDWiFi_PIN = LED_WIFI_PIN;                    // light on WiFi connected, flashes on searching Network. If GPIO 0 is used LED must be activ LOW otherwise ESP won't boot
+	uint8_t LEDWiFi_ON_Level = LED_WIFI_ON_LEVEL;	         // HIGH = LED on high, LOW = LED on low
 
-										// (not supported at the moment) relais for section control
-	uint8_t Relay_PIN[16] = { 255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255 }; 
-	uint8_t Tram_PIN[3] = { 255,255,255 };  // (not supported at the moment) relais for tramline control
-	uint8_t Relays_ON = HIGH;		        // HIGH = Relay on high, LOW = Relay on low
+										
+	uint8_t Relay_PIN[16] = RELAY_PINS;                    // (not supported at the moment) relais for section control
+	uint8_t Tram_PIN[3] = TRAM_PINS;                       // (not supported at the moment) relais for tramline control
+	uint8_t Relays_ON = RELAYS_ON;		                     // HIGH = Relay on high, LOW = Relay on low
 
-	uint8_t WAS_PIN = 36;               // PIN for Wheel Angle Sensor (none, if ADS used)
-	uint8_t WAS_Diff_GND_PIN = 39;
-	uint8_t WORKSW_PIN = 33;            // PIN for workswitch (can be analog or on/off switch see WorkSW_mode)
-	uint8_t STEERSW_PIN = 34;           // Pin for steer button or switch (see SteerSwitchType)
-	uint8_t encA_PIN = 4;               // Pin for steer encoder, to turn off autosteer if steering wheel is used
-	uint8_t encB_PIN = 32;              // Pin for steer encoder, to turn off autosteer if steering wheel is used
+	uint8_t WAS_PIN = LOCAL_WAS_PIN;                       // PIN for Wheel Angle Sensor (none, if ADS used)
+	uint8_t WAS_Diff_GND_PIN = LOCAL_WAS_DIFF_GND_PIN;
+	uint8_t WORKSW_PIN = WORK_SW_PIN;                      // PIN for workswitch (can be analog or on/off switch see WorkSW_mode)
+	uint8_t STEERSW_PIN = STEER_SW_PIN;                    // Pin for steer button or switch (see SteerSwitchType)
+	uint8_t encA_PIN = ENC_A_PIN;                          // Pin for steer encoder, to turn off autosteer if steering wheel is used
+	uint8_t encB_PIN = ENC_B_PIN;                          // Pin for steer encoder, to turn off autosteer if steering wheel is used
 
-	uint8_t Servo_PIN = 16;			        // (not supported at the moment) Pin for servo to pull motor to steering wheel
+	uint8_t Servo_PIN = SERVO_PIN;			                   // (not supported at the moment) Pin for servo to pull motor to steering wheel
 
-	uint8_t PWM_PIN = 27;               // PWM Output to motor controller (IBT2 or cytron)
-	uint8_t DIR_PIN = 26;               // direction output to motor controller (IBT2 or cytron)
-	uint8_t Current_sens_PIN = 35;	    // (not supported at the moment) current sensor for IBT2 to read the force needed to turn steering wheel
+	uint8_t PWM_PIN = LOCAL_PWM_PIN;                       // PWM Output to motor controller (IBT2 or cytron)
+	uint8_t DIR_PIN = LOCAL_DIR_PIN;                       // direction output to motor controller (IBT2 or cytron)
+	uint8_t Current_sens_PIN = CURRENT_SENSE_PIN;	         // (not supported at the moment) current sensor for IBT2 to read the force needed to turn steering wheel
 
-	uint8_t Eth_CS_PIN = 5;             // CS PIN with SPI Ethernet hardware  SPI config: MOSI 23 / MISO 19 / CLK18 / CS5
+	uint8_t Eth_CS_PIN = ETHERNET_CS_PIN;                  // CS PIN with SPI Ethernet hardware  SPI config: MOSI 23 / MISO 19 / CLK18 / CS5
 
-	uint8_t CAN_RX_PIN = 25;		        // (not supported at the moment) CAN bus 
-	uint8_t CAN_TX_PIN = 17;		        // (not supported at the moment)
+	uint8_t CAN_RX_PIN = LOCAL_CAN_RX_PIN;		             // (not supported at the moment) CAN bus 
+	uint8_t CAN_TX_PIN = LOCAL_CAN_TX_PIN;		             // (not supported at the moment)
 
 	//##########################################################################################################
 	//### End of Setup Zone ####################################################################################
 	//##########################################################################################################
 	//filter variables set by AOG via PGN settings sentence
-	float Ko = 0.05f;     //overall gain  
-	float Kp = 20.0f;     //proportional gain  
-	float Ki = 0.001f;    //integral gain
-	float Kd = 1.0f;      //derivative gain 
-	float AOGSteerPositionZero = 0;
-	float steerSensorCounts = 100;
-	uint16_t roll_corr = 200;
-	byte minPWM = 40, highPWM = 150, lowPWM = 60;
+	float Ko = KO;                      //overall gain  
+	float Kp = KP;                      //proportional gain  
+	float Ki = KI;                      //integral gain
+	float Kd = KD;                      //derivative gain 
+	float AOGSteerPositionZero = AOG_STEER_POSITION_ZERO;
+	float steerSensorCounts = STEER_SENSOR_COUNTS;
+	uint16_t roll_corr = ROLL_CORR;
+	byte minPWM = MIN_PWM, highPWM = HIGH_PWM, lowPWM = LOW_PWM;
 
-	bool debugmode = false;
-	bool debugmodeDataFromAOG = false;
+	bool debugmode = DEBUG_MODE;
+	bool debugmodeDataFromAOG = DEBUG_MODE_DATA_FROM_AOG;
 
 };  Storage Set;
 
-boolean EEPROM_clear = false;  //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again
-
-
+boolean EEPROM_clear = EEPROM_CLEAR;  //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again
 
 //Sentence up to V4.3 -----------------------------------------------------------------------------	
 //steer PGN numbers are the same in V4.3
