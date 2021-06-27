@@ -8,7 +8,7 @@ void assignGPIOs_start_extHardware() {
 	delay(20);
 
 	//init GPIO pins, if 255 = unused/not connected
-#if useLED_BUILTIN
+#if USE_LED_BUILTIN
 	pinMode(LED_BUILTIN, OUTPUT);
 #endif	
 	if (Set.LEDWiFi_PIN < 255) { pinMode(Set.LEDWiFi_PIN, OUTPUT); }
