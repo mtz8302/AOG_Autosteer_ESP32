@@ -55,11 +55,9 @@ char VersionTXT[120] = " - 27. Juni 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, 
   #define MOTOR_DRIVE_DIRECTION 0               // 0 = normal, 1 = inverted
   #define MOTOR_SLOW_DRIVE_DEGREES 5            // How many degrees before decreasing Max PWM
   #define PWM_OUT_FREQU 20000                   // PWM frequency for motordriver: 1000Hz:for low heat at PWM device 20000Hz: not hearable
-  #define STEPPER_MAX_SPEED 1000                // setSpeedInHz (stepper-steps per second)
-  #define STEPPER_ACCELERATION 5000
   #define STEPPER_KP_TO_DEGREES_FACTOR 10       // when setting Kp by WebIO or AGO the stepper-steps per degree WAS will be recalculated "stepPerPositionDegree = Kp * STEPPER_KP_TO_DEGREES_FACTOR" to make it adjustable the common and easy way
-  #define STEPPER_HIGHRPM_TO_MAXSPEED_FACTOR 50 // when setting highRPM by WebIO or AGO the stepper-maxSpeed will be recalculated "maxSpeed = highRPM * STEPPER_HIGHRPM_TO_MAXSPEED_FACTOR" to make it adjustable the common and easy way
-  #define STEPPER_LOWRPM_TO_ACCELERATION_FACTOR 50 // when setting lowRPM by WebIO or AGO the stepper-acceleration will be recalculated "acceleration = lowRPM * STEPPER_LOWRPM_TO_ACCELERATION_FACTOR" to make it adjustable the common and easy way
+  #define STEPPER_HIGHPWM_TO_MAXSPEED_FACTOR 50 // when setting highRPM by WebIO or AGO the stepper-maxSpeed will be recalculated "maxSpeed = highRPM * STEPPER_HIGHRPM_TO_MAXSPEED_FACTOR" to make it adjustable the common and easy way
+  #define STEPPER_LOWPWM_TO_ACCELERATION_FACTOR 50 // when setting lowRPM by WebIO or AGO the stepper-acceleration will be recalculated "acceleration = lowRPM * STEPPER_LOWRPM_TO_ACCELERATION_FACTOR" to make it adjustable the common and easy way
 
   //WAS
   #define WAS_TYPE 2                            // 0 = No ADS installed, Wheel Angle Sensor connected directly to ESP at GPIO 36 (pin set below) (attention 3,3V only)
@@ -248,11 +246,11 @@ struct Storage {
 
 	uint8_t MotorSlowDriveDegrees = MOTOR_SLOW_DRIVE_DEGREES;	// How many degrees before decreasing Max PWM 
 
-  uint16_t stepperMaxSpeed = STEPPER_MAX_SPEED;         // setSpeedInHz (stepper-steps per second)
-  uint16_t stepperAcceleration = STEPPER_ACCELERATION;
   uint16_t stepperKpToDegreesFactor = STEPPER_KP_TO_DEGREES_FACTOR;
-  uint16_t stepperhighRPMToMaxSpeedFactor = STEPPER_HIGHRPM_TO_MAXSPEED_FACTOR;
-  uint16_t stepperlowRPMToAccelerationFactor = STEPPER_LOWRPM_TO_ACCELERATION_FACTOR;
+  uint16_t stepperhighRPMToMaxSpeedFactor = STEPPER_HIGHPWM_TO_MAXSPEED_FACTOR;
+  uint16_t stepperlowRPMToAccelerationFactor = STEPPER_LOWPWM_TO_ACCELERATION_FACTOR;
+  uint16_t stepperMaxSpeed = STEPPER_HIGHPWM_TO_MAXSPEED_FACTOR * HIGH_PWM;         // setSpeedInHz (stepper-steps per second)
+  uint16_t stepperAcceleration = STEPPER_LOWPWM_TO_ACCELERATION_FACTOR * LOW_PWM;
 
 	uint8_t WASType = WAS_TYPE;                          // 0 = No ADS installed, Wheel Angle Sensor connected directly to ESP at GPIO 36 (pin set below) (attention 3,3V only)
 															                       	 // 1 = Single Mode of ADS1115 - Sensor Signal at A0 (ADS)
