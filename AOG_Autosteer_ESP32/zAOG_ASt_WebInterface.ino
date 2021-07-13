@@ -219,7 +219,16 @@ void process_Request()
 				}
 			}
 		}
-		if (WiFi_Server.argName(n) == "OUTPUT_TYPE") { Set.output_type = byte(WiFi_Server.arg(n).toInt()); }
+		if (WiFi_Server.argName(n) == "OUTPUT_TYPE") { 
+		  byte tempOutputType = byte(WiFi_Server.arg(n).toInt());
+      if (tempOutputType == 5 && Set.output_type != 5){
+        temInt = ACTION_RESTART;
+      }
+      else if (tempOutputType != 5 && Set.output_type == 5){
+        temInt = ACTION_RESTART;
+      }
+		  Set.output_type = tempOutputType;
+		}
 		if (WiFi_Server.argName(n) == "invMotor") {
 			if (WiFi_Server.arg(n) == "true") {
 			  if (Set.MotorDriveDirection == 0) {
@@ -704,7 +713,7 @@ void make_HTML01() {
 
 	for (int i = 0; i < 6; i++) {
 		strcat(HTML_String, "<tr>");
-		if (i == 0)  strcat(HTML_String, "<td><b>Select your output type</b></td>");
+		if (i == 0)  strcat(HTML_String, "<td><b>Select your output type </b> (If you toggle between Stepper Driver and an other option, the Autosteerboard will reset automatically</td>");
 		else if (i == 1) strcat(HTML_String, "<td>SWM: Steer Wheel Motor</td>");
 		else strcat(HTML_String, "<td> </td>");
 		strcat(HTML_String, "<td><input type = \"radio\" onclick=\"sendVal('/?OUTPUT_TYPE=");
