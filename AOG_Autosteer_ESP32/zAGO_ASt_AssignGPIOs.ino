@@ -86,8 +86,8 @@ void assignGPIOs_start_extHardware() {
 
   if (Set.output_type == 5){ //stepper  
     if (Set.stepperEnableSafetyPIN < 255) { 
-      //pinMode(Set.stepperEnableSafetyPIN, OUTPUT);
-      //digitalWrite (Set.stepperEnableSafetyPIN, HIGH); //Is set HIGH now for safety, LOW will be to enable
+      pinMode(Set.stepperEnableSafetyPIN, OUTPUT);
+      digitalWrite (Set.stepperEnableSafetyPIN, HIGH); //Is set HIGH now for safety, LOW will be to enable
       if (Set.debugmode) {
         Serial.print("stepperEnableSafetyPIN is set to ");
         Serial.println(Set.stepperEnableSafetyPIN);

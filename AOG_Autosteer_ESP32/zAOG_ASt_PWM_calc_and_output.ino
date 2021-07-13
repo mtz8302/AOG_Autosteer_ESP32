@@ -37,7 +37,7 @@ void calcSteeringPIDandMoveMotor(void)
   }
   else if (Set.output_type == 5){ //stepper  
     if (_stepperActiveStatus == -1){ //init or just OFF
-      //digitalWrite (Set.stepperEnableSafetyPIN, HIGH);
+      digitalWrite (Set.stepperEnableSafetyPIN, HIGH);
       stepper->forceStopAndNewPosition(steerAngleActual * stepPerPositionDegree);  
       stepper->disableOutputs(); 
       _stepperActiveStatus = 0;
@@ -51,7 +51,7 @@ void calcSteeringPIDandMoveMotor(void)
       }
     }
     else if (_stepperActiveStatus == 1){ //just ON
-      //digitalWrite (Set.stepperEnableSafetyPIN, LOW);
+      digitalWrite (Set.stepperEnableSafetyPIN, LOW);
       stepper->setCurrentPosition (steerAngleActual * stepPerPositionDegree);
       if (Set.debugmode) { Serial.print("Stepper just ON, current Pos. "); Serial.print(stepper->getCurrentPosition ());}
       stepper->enableOutputs();

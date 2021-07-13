@@ -221,8 +221,18 @@ void process_Request()
 		}
 		if (WiFi_Server.argName(n) == "OUTPUT_TYPE") { Set.output_type = byte(WiFi_Server.arg(n).toInt()); }
 		if (WiFi_Server.argName(n) == "invMotor") {
-			if (WiFi_Server.arg(n) == "true") { Set.MotorDriveDirection = 1; }
-			else { Set.MotorDriveDirection = 0; }
+			if (WiFi_Server.arg(n) == "true") {
+			  if (Set.MotorDriveDirection == 0) {
+          Set.MotorDriveDirection = 1;
+          UpdateStepperSettings ();
+			  }
+			}
+			else { //WiFi_Server.arg(n) == "false"
+        if (Set.MotorDriveDirection == 1) {
+          Set.MotorDriveDirection = 0;
+          UpdateStepperSettings ();
+        }
+			}
 		}
 		if (WiFi_Server.argName(n) == "PWMFreq") {
 			argVal = int(WiFi_Server.arg(n).toInt());
@@ -1155,6 +1165,21 @@ void make_HTML01() {
 	strcat(HTML_String, " high PWM: ");
 	strcati(HTML_String, Set.highPWM);
 	strcat(HTML_String, "<br><br>");
+  
+  if (Set.output_type == 5){
+    strcat(HTML_String, " stepperKpToDegreesFactor: ");
+    strcati(HTML_String, Set.stepperKpToDegreesFactor);   
+    strcat(HTML_String, " stepPerPositionDegree: ");
+    strcati(HTML_String, stepPerPositionDegree);
+    strcat(HTML_String, " stepperhighRPMToMaxSpeedFactor: ");
+    strcati(HTML_String, Set.stepperhighRPMToMaxSpeedFactor);
+    strcat(HTML_String, " stepperMaxSpeed: ");
+    strcati(HTML_String, Set.stepperMaxSpeed);
+    strcat(HTML_String, " stepperlowRPMToAccelerationFactor: ");
+    strcati(HTML_String, Set.stepperlowRPMToAccelerationFactor);  
+    strcat(HTML_String, " stepperAcceleration: ");
+    strcati(HTML_String, Set.stepperAcceleration);
+  }
 
 	strcat(HTML_String, "Steerdata from AOG: Guidance Status: ");
 	strcati(HTML_String, guidanceStatus);
