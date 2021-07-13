@@ -238,10 +238,13 @@ void parseDataFromAOG() {
 							//		Set.wasOffset |= (SentenceFromAOG[11] << 8);  //read was zero offset Lo
 									Set.AckermanFix = SentenceFromAOG[12];
 
-									EEprom_write_all();
-
 									// for PWM High to Low interpolator
 									highLowPerDeg = ((float)(Set.highPWM - Set.lowPWM)) / Set.MotorSlowDriveDegrees;
+                  
+                  //stepper
+                  UpdateStepperSettings (); //Including some calculations (dodo before EEProm Write)
+
+                  EEprom_write_all();
 
 									if (Set.debugmodeDataFromAOG) { Serial.println("got NEW steer settings from AOG"); }
 									isSteerSettingFound = false;
@@ -276,6 +279,9 @@ void parseDataFromAOG() {
 									Set.highPWM = SentenceFromAOG[10]; //
 
 									Set.steerSensorCounts = SentenceFromAOG[11];
+
+                  //stepper
+                  UpdateStepperSettings ();
 
 									int checksum = 0;
 									for (byte i = 4; i < 12; i++) checksum += SentenceFromAOG[i];
@@ -312,7 +318,12 @@ void parseDataFromAOG() {
 									//if (bitRead(SentenceFromAOG[8], 1)) Set.PressureSensor = 1; else Set.PressureSensor = 0;
 									//if (bitRead(SentenceFromAOG[8], 2)) Set.CurrentSensor = 1; else Set.CurrentSensor = 0;
 
-									EEprom_write_all();
+									
+
+                  //stepper
+                  UpdateStepperSettings ();
+                  
+                  EEprom_write_all();
 
 									if (Set.debugmodeDataFromAOG) { Serial.println("got NEW Arduino settings from AOG V4.6 or higher"); }
 
@@ -349,6 +360,9 @@ void parseDataFromAOG() {
 
 											byte checksum = 0;
 											for (int i = 2; i < 10; i++) checksum += udpData[i];
+
+                      //stepper
+                      UpdateStepperSettings ();
 		*/
 									isSteerArdConfigFoundV17 = false;
 									incomSentenceDigit = 1;

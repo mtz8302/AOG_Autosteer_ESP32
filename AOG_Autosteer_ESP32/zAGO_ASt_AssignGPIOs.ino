@@ -10,32 +10,145 @@ void assignGPIOs_start_extHardware() {
 	//init GPIO pins, if 255 = unused/not connected
 #if USE_LED_BUILTIN
 	pinMode(LED_BUILTIN, OUTPUT);
+  if (Set.debugmode) {
+      Serial.print("LED_BUILTIN as OUTPUT is set to ");
+      Serial.println(LED_BUILTIN);
+  }
 #endif	
-	if (Set.LEDWiFi_PIN < 255) { pinMode(Set.LEDWiFi_PIN, OUTPUT); }
-	if ((Set.WorkSW_mode > 0) && (Set.WORKSW_PIN < 255)) { pinMode(Set.WORKSW_PIN, INPUT_PULLUP); }
-	if (Set.Relay_PIN[0] < 255) { pinMode(Set.Relay_PIN[0], OUTPUT); }
-	if (Set.Relay_PIN[1] < 255) { pinMode(Set.Relay_PIN[1], OUTPUT); }
 
-	//no check if < 255 as needed for autosteer in every case
-	pinMode(Set.AutosteerLED_PIN, OUTPUT);
-	pinMode(Set.PWM_PIN, OUTPUT);
-	pinMode(Set.DIR_PIN, OUTPUT);
-	delay(2);
-	ledcSetup(0, Set.PWMOutFrequ, 8);  // PWM Output with channel 0, x kHz, 8-bit resolution (0-255)
-	ledcSetup(1, Set.PWMOutFrequ, 8);  // PWM Output with channel 1, x kHz, 8-bit resolution (0-255)
-	delay(2);
-	ledcAttachPin(Set.PWM_PIN, 0);  // attach PWM PIN to Channel 0
-	ledcAttachPin(Set.DIR_PIN, 1);  // attach PWM PIN to Channel 1
+	if (Set.LEDWiFi_PIN < 255) { 
+	  pinMode(Set.LEDWiFi_PIN, OUTPUT); 
+	  if (Set.debugmode) {
+        Serial.print("LEDWiFi_PIN as OUTPUT is set to ");
+        Serial.println(Set.LEDWiFi_PIN);
+    }
+  }
+  if (Set.AutosteerLED_PIN < 255) { //?? no check if < 255 as needed for autosteer in every case ?? 
+    pinMode(Set.AutosteerLED_PIN, OUTPUT);
+    if (Set.debugmode) {
+        Serial.print("AutosteerLED_PIN as OUTPUT is set to ");
+        Serial.println(Set.AutosteerLED_PIN);
+    }
+  } 
+	if ((Set.WorkSW_mode > 0) && (Set.WORKSW_PIN < 255)) {
+	  pinMode(Set.WORKSW_PIN, INPUT_PULLUP); 
+	  if (Set.debugmode) {
+        Serial.print("WORKSW_PIN as INPUT_PULLUP is set to ");
+        Serial.println(Set.WORKSW_PIN);
+    }
+	}
+	if (Set.Relay_PIN[0] < 255) { 
+	  pinMode(Set.Relay_PIN[0], OUTPUT);
+    if (Set.debugmode) {
+        Serial.print("Relay_PIN[0] as OUTPUT is set to ");
+        Serial.println(Set.Relay_PIN[0]);
+    } 
+	}
+	if (Set.Relay_PIN[1] < 255) { 
+	  pinMode(Set.Relay_PIN[1], OUTPUT);
+    if (Set.debugmode) {
+        Serial.print("Relay_PIN[1] as OUTPUT is set to ");
+        Serial.println(Set.Relay_PIN[1]);
+    } 
+	}
+  if (Set.STEERSW_PIN < 255) {
+    if (Set.SteerSwitchType == 0) { 
+      pinMode(Set.STEERSW_PIN, INPUT_PULLDOWN);
+      if (Set.debugmode) {
+        Serial.print("STEERSW_PIN as INPUT_PULLDOWN is set to ");
+        Serial.println(Set.STEERSW_PIN);
+      } 
+    }
+    if (Set.SteerSwitchType > 0) { 
+      pinMode(Set.STEERSW_PIN, INPUT_PULLUP);
+      if (Set.debugmode) {
+        Serial.print("STEERSW_PIN as INPUT_PULLUP is set to ");
+        Serial.println(Set.STEERSW_PIN);
+      } 
+    }
+  }
+  
+  //Setup Interrupt -Steering Wheel encoder
+  if (Set.encA_PIN < 255) { 
+    pinMode(Set.encA_PIN, INPUT_PULLUP);
+    if (Set.debugmode) {
+        Serial.print("encA_PIN as INPUT_PULLUP is set to ");
+        Serial.println(Set.encA_PIN);
+      } 
+  }
+  if (Set.encB_PIN < 255) { 
+    pinMode(Set.encB_PIN, INPUT_PULLUP);
+    if (Set.debugmode) {
+        Serial.print("encB_PIN as INPUT_PULLUP is set to ");
+        Serial.println(Set.encB_PIN);
+    } 
+  }
+
+  if (Set.output_type == 5){ //stepper  
+    if (Set.stepperEnableSafetyPIN < 255) { 
+      //pinMode(Set.stepperEnableSafetyPIN, OUTPUT);
+      //digitalWrite (Set.stepperEnableSafetyPIN, HIGH); //Is set HIGH now for safety, LOW will be to enable
+      if (Set.debugmode) {
+        Serial.print("stepperEnableSafetyPIN is set to ");
+        Serial.println(Set.stepperEnableSafetyPIN);
+      }
+    }
+    else {
+      if (Set.debugmode) {
+        Serial.println("Error = USE STEPPER WITHOUT stepperEnableSafetyPIN NOT POSSIBLE");
+      }
+    }
+    
+    engine.init();
+    if (Set.stepperStepPIN < 255) { 
+      stepper = engine.stepperConnectToPin(Set.stepperStepPIN);
+      if (Set.debugmode) {
+        Serial.print("stepperStepPIN is set to ");
+        Serial.println(Set.stepperStepPIN);
+      }
+    }
+    else {
+      if (Set.debugmode) {
+        Serial.println("Error = USE STEPPER WITHOUT stepperStepPIN NOT POSSIBLE");
+      }
+    }
+    
+    if (Set.stepperEnablePIN < 255) { 
+      stepper->setEnablePin(Set.stepperEnablePIN, true); //High to enable
+      stepper->setAutoEnable(false);
+      // If auto enable/disable need delays, just add (one or both):
+      // stepper->setDelayToEnable(50);
+      // stepper->setDelayToDisable(1000);
+      stepper->disableOutputs();
+    }
+    else {
+      if (Set.debugmode) {
+        Serial.println("Error = USE STEPPER WITHOUT stepperEnablePIN NOT POSSIBLE");
+      }
+    }
+    
+    UpdateStepperSettings ();
+ }
+  else { //Soething other than StepperMotor
+    if (Set.PWM_PIN < 255) { 
+      pinMode(Set.PWM_PIN, OUTPUT); 
+      delay(2);
+      ledcSetup(0, Set.PWMOutFrequ, 8);  // PWM Output with channel 0, x kHz, 8-bit resolution (0-255)
+      delay(2);
+      ledcAttachPin(Set.PWM_PIN, 0);  // attach PWM PIN to Channel 0
+      }
+    if (Set.DIR_PIN < 255) { 
+      pinMode(Set.DIR_PIN, OUTPUT);
+    	delay(2);
+    	ledcSetup(1, Set.PWMOutFrequ, 8);  // PWM Output with channel 1, x kHz, 8-bit resolution (0-255)
+    	delay(2);
+    	ledcAttachPin(Set.DIR_PIN, 1);  // attach PWM PIN to Channel 1
+    }
+  }
 
 	//if (Set.WASType == 0)  Set.WebIOSteerPosZero = 2048;                //Starting Point with ESP ADC 2048 
-	//if (Set.WASType > 0 && Set.WASType < 3)  Set.WebIOSteerPosZero = 13000;  //with ADS start with 13000  
+	//if (Set.WASType > 0 && Set.WASType < 3)  Set.WebIOSteerPosZero = 13000;  //with ADS start with 13000 
 
-	if (Set.SteerSwitchType == 0) { pinMode(Set.STEERSW_PIN, INPUT_PULLDOWN); }
-	if (Set.SteerSwitchType > 0) { pinMode(Set.STEERSW_PIN, INPUT_PULLUP); }
-
-	//Setup Interrupt -Steering Wheel encoder
-	if (Set.encA_PIN < 255) { pinMode(Set.encA_PIN, INPUT_PULLUP); }
-	if (Set.encB_PIN < 255) { pinMode(Set.encB_PIN, INPUT_PULLUP); }
 
 	delay(50);
 

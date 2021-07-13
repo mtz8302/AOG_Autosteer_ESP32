@@ -1,37 +1,106 @@
-void calcSteeringPID(void)
+void calcSteeringPIDandMoveMotor(void)
 {
-    //Proportional only
-    pValue = Set.Kp * steerAngleError;
-    pwmDrive = (int)pValue;
-
-    errorAbs = abs(steerAngleError);
-    float newMax = 0;
-
-    if (errorAbs < Set.MotorSlowDriveDegrees)
-    {
-        newMax = (errorAbs * highLowPerDeg) + Set.lowPWM;
+  if(Set.output_type == 1 || Set.output_type == 2 || Set.output_type == 3 || Set.output_type == 4){ //DC MOTOR or VALVE
+    if (steerEnable) {
+      //Proportional only
+      pValue = Set.Kp * steerAngleError;
+      pwmDrive = (int)pValue;
+  
+      errorAbs = abs(steerAngleError);
+      float newMax = 0;
+  
+      if (errorAbs < Set.MotorSlowDriveDegrees)
+      {
+          newMax = (errorAbs * highLowPerDeg) + Set.lowPWM;
+      }
+      else newMax = Set.highPWM;
+  
+      //add min throttle factor so no delay from motor resistance.
+      if (pwmDrive < 0) pwmDrive -= Set.minPWM;
+      else if (pwmDrive > 0) pwmDrive += Set.minPWM;
+  
+      //Serial.print(newMax); //The actual steering angle in degrees
+      //Serial.print(",");
+  
+      //limit the pwm drive
+      if (pwmDrive > newMax) pwmDrive = newMax;
+      if (pwmDrive < -newMax) pwmDrive = -newMax;
+  
+      if (Set.MotorDriveDirection) pwmDrive *= -1;
+      if (Set.debugmode) { Serial.print("PWM for output: ");  Serial.println(pwmDrive); }
     }
-    else newMax = Set.highPWM;
-
-    //add min throttle factor so no delay from motor resistance.
-    if (pwmDrive < 0) pwmDrive -= Set.minPWM;
-    else if (pwmDrive > 0) pwmDrive += Set.minPWM;
-
-    //Serial.print(newMax); //The actual steering angle in degrees
-    //Serial.print(",");
-
- //limit the pwm drive
-    if (pwmDrive > newMax) pwmDrive = newMax;
-    if (pwmDrive < -newMax) pwmDrive = -newMax;
-
-    if (Set.MotorDriveDirection) pwmDrive *= -1;
-    if (Set.debugmode) { Serial.print("PWM for output: ");  Serial.println(pwmDrive); }
+    else {
+      pwmDrive = 0; //turn off steering motor  
+      pulseCount = 0; //Reset counters if Autosteer is offline 
+    }
+    DCmotorDrive ();  
+  }
+  else if (Set.output_type == 5){ //stepper  
+    if (_stepperActiveStatus == -1){ //init or just OFF
+      //digitalWrite (Set.stepperEnableSafetyPIN, HIGH);
+      stepper->forceStopAndNewPosition(steerAngleActual * stepPerPositionDegree);  
+      stepper->disableOutputs(); 
+      _stepperActiveStatus = 0;
+      pwmDisplay = 0;
+      if (Set.debugmode) { Serial.println("Stepper INIT"); }
+    }
+    else if (_stepperActiveStatus == 0){ //OFF
+      pwmDisplay = 0;
+      if (steerEnable){
+        _stepperActiveStatus = 1;  
+      }
+    }
+    else if (_stepperActiveStatus == 1){ //just ON
+      //digitalWrite (Set.stepperEnableSafetyPIN, LOW);
+      stepper->setCurrentPosition (steerAngleActual * stepPerPositionDegree);
+      if (Set.debugmode) { Serial.print("Stepper just ON, current Pos. "); Serial.print(stepper->getCurrentPosition ());}
+      stepper->enableOutputs();
+      if (steerEnable){
+        _stepperActiveStatus = 2; 
+      }
+      else {
+        _stepperActiveStatus = -1;
+      }
+      pwmDisplay = 0; 
+    }
+    else if (_stepperActiveStatus == 2){ //ON
+      if (steerEnable){
+        if (Set.debugmode) { Serial.print(" Stepper ON current Pos." );  Serial.print(stepper->getCurrentPosition ()); Serial.print("Stepper stepPerPositionDegree "); Serial.print(stepPerPositionDegree); }
+        if (steerAngleSetPoint != steerAngleActual){
+          if (millis() - lastStepUpdate > 200){
+            if (Set.debugmode) { Serial.print("Stepper Update Move To "); Serial.print(steerAngleSetPoint * stepPerPositionDegree); }
+            stepper->setCurrentPosition (stepPerPositionDegree * steerAngleActual);
+            stepper->moveTo (steerAngleSetPoint * stepPerPositionDegree);
+            lastStepUpdate = millis ();
+          }    
+        }
+        else {
+          if (Set.debugmode) { Serial.print("Stepper Position OK "); }
+          stepper->stopMove();
+          stepper->setCurrentPosition (stepPerPositionDegree * steerAngleActual);
+          stepper->moveTo(stepPerPositionDegree * steerAngleActual);
+        }
+        pwmDisplay = map(stepper->getSpeedInMilliHz(),0,Set.stepperMaxSpeed,0,255);
+      }
+      else {
+        _stepperActiveStatus = -1;
+        pwmDisplay = 0;
+      }
+    } 
+    else { //no valide OUTPUT selected
+      pwmDrive = 0;
+      if (Set.debugmode) { 
+        Serial.print("NO valide Output/Motor selected ");
+      }
+      DCmotorDrive ();
+    }
+  }
 }
 
 //-------------------------------------------------------------------------------------------------
 // select output Driver
 //---------------------------------------------------------------------
-void motorDrive(void) 
+void DCmotorDrive(void) 
 {
   switch (Set.output_type) {
     case 1:
@@ -45,6 +114,9 @@ void motorDrive(void)
       break;
     case 4:
       motorDrive_IBT_Danfoss();
+      break;
+    case 5:
+      //Drive_Stepper();
       break;
     default:
       // if nothing else matches no Output

@@ -8,7 +8,7 @@ char HTML_String[40000];
 #define ACTION_SET_WS_THRESHOLD 5
 
 // Radiobutton output
-char output_driver_tab[5][22] = { "None", "Cytron MD30 + SWM", "IBT_2 +SWM", "IBT_2 +PWM Valve", "IBT_2 +Danfoss Valve" };
+char output_driver_tab[6][22] = { "None", "Cytron MD30 + SWM", "IBT_2 +SWM", "IBT_2 +PWM Valve", "IBT_2 +Danfoss Valve", "Stepper Driver" };
 
 // Radiobutton analog input
 char was_input_tab[3][25] = { "direct to ESP PIN", "ADS 1115 single", "ADS 1115 differential" };
@@ -692,7 +692,7 @@ void make_HTML01() {
 	strcat(HTML_String, "<table>");
 	set_colgroup(300, 250, 150, 0, 0);
 
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < 6; i++) {
 		strcat(HTML_String, "<tr>");
 		if (i == 0)  strcat(HTML_String, "<td><b>Select your output type</b></td>");
 		else if (i == 1) strcat(HTML_String, "<td>SWM: Steer Wheel Motor</td>");
