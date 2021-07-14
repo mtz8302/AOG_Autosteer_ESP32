@@ -715,7 +715,7 @@ void make_HTML01() {
 
 	for (int i = 0; i < 6; i++) {
 		strcat(HTML_String, "<tr>");
-		if (i == 0)  strcat(HTML_String, "<td><b>Select your output type </b> (If you toggle between Stepper Driver and an other option, the Autosteerboard will reset automatically</td>");
+		if (i == 0)  strcat(HTML_String, "<td><b>Select your output type </b> (If you toggle during runtime between Stepper Driver and an other option, the Autosteerboard will reboot automatically without saving data to eeprom due to an race condition in the software! PLEASE COMPILE WITH STEPPER AS DEFAULT IF NEEDET </td>");
 		else if (i == 1) strcat(HTML_String, "<td>SWM: Steer Wheel Motor</td>");
 		else strcat(HTML_String, "<td> </td>");
 		strcat(HTML_String, "<td><input type = \"radio\" onclick=\"sendVal('/?OUTPUT_TYPE=");
