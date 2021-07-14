@@ -11,8 +11,8 @@ void UpdateStepperSettings (){
 
   //calculate values
   stepPerPositionDegree = Set.Kp * Set.stepperKpToDegreesFactor; 
-  Set.stepperMaxSpeed = Set.highPWM * Set.stepperhighRPMToMaxSpeedFactor; 
-  Set.stepperAcceleration = Set.lowPWM * Set.stepperlowRPMToAccelerationFactor; 
+  Set.stepperMaxSpeed = Set.highPWM * Set.stepperhighPWMToMaxSpeedFactor; 
+  Set.stepperAcceleration = Set.lowPWM * Set.stepperlowPWMToAccelerationFactor; 
 
   //set values
  

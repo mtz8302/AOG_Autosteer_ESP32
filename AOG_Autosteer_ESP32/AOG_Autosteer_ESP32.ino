@@ -247,8 +247,8 @@ struct Storage {
 	uint8_t MotorSlowDriveDegrees = MOTOR_SLOW_DRIVE_DEGREES;	// How many degrees before decreasing Max PWM 
 
   uint16_t stepperKpToDegreesFactor = STEPPER_KP_TO_DEGREES_FACTOR;
-  uint16_t stepperhighRPMToMaxSpeedFactor = STEPPER_HIGHPWM_TO_MAXSPEED_FACTOR;
-  uint16_t stepperlowRPMToAccelerationFactor = STEPPER_LOWPWM_TO_ACCELERATION_FACTOR;
+  uint16_t stepperhighPWMToMaxSpeedFactor = STEPPER_HIGHPWM_TO_MAXSPEED_FACTOR;
+  uint16_t stepperlowPWMToAccelerationFactor = STEPPER_LOWPWM_TO_ACCELERATION_FACTOR;
   uint16_t stepperMaxSpeed = STEPPER_HIGHPWM_TO_MAXSPEED_FACTOR * HIGH_PWM;         // setSpeedInHz (stepper-steps per second)
   uint16_t stepperAcceleration = STEPPER_LOWPWM_TO_ACCELERATION_FACTOR * LOW_PWM;
 

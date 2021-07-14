@@ -221,25 +221,27 @@ void process_Request()
 		}
 		if (WiFi_Server.argName(n) == "OUTPUT_TYPE") { 
 		  byte tempOutputType = byte(WiFi_Server.arg(n).toInt());
-      if (tempOutputType == 5 && Set.output_type != 5){
-        temInt = ACTION_RESTART;
+      if ((tempOutputType == 5 && Set.output_type != 5) || (tempOutputType != 5 && Set.output_type == 5)){
+        Set.output_type = tempOutputType;
+        //EEprom_write_all();
       }
-      else if (tempOutputType != 5 && Set.output_type == 5){
-        temInt = ACTION_RESTART;
+      else {
+        Set.output_type = tempOutputType;
       }
-		  Set.output_type = tempOutputType;
 		}
 		if (WiFi_Server.argName(n) == "invMotor") {
 			if (WiFi_Server.arg(n) == "true") {
 			  if (Set.MotorDriveDirection == 0) {
           Set.MotorDriveDirection = 1;
           UpdateStepperSettings ();
+          EEprom_write_all();
 			  }
 			}
 			else { //WiFi_Server.arg(n) == "false"
         if (Set.MotorDriveDirection == 1) {
           Set.MotorDriveDirection = 0;
           UpdateStepperSettings ();
+          EEprom_write_all();
         }
 			}
 		}
@@ -1161,7 +1163,7 @@ void make_HTML01() {
 	strcat(HTML_String, "<h2>Debug</h2><hr>");
 
 	//debug values
-	strcat(HTML_String, "Settingsdata from AOG: Ackermann: ");
+	strcat(HTML_String, "<b>Settingsdata from AOG:</b> <br>Ackermann: ");
 	strcati(HTML_String, Set.AckermanFix);
 	strcat(HTML_String, " sensorCounts: ");
 	strcati(HTML_String, Set.steerSensorCounts);
@@ -1175,22 +1177,32 @@ void make_HTML01() {
 	strcati(HTML_String, Set.highPWM);
 	strcat(HTML_String, "<br><br>");
   
-  if (Set.output_type == 5){
+  if (Set.output_type == 5){ //stepper
+    strcat(HTML_String, "<b>Stepper Values:</b> <br>");
+    strcat(HTML_String, "Kp: ");
+    strcati(HTML_String, Set.Kp);
     strcat(HTML_String, " stepperKpToDegreesFactor: ");
     strcati(HTML_String, Set.stepperKpToDegreesFactor);   
     strcat(HTML_String, " stepPerPositionDegree: ");
     strcati(HTML_String, stepPerPositionDegree);
-    strcat(HTML_String, " stepperhighRPMToMaxSpeedFactor: ");
-    strcati(HTML_String, Set.stepperhighRPMToMaxSpeedFactor);
+    strcat(HTML_String, "<br>");
+    strcat(HTML_String, "high PWM: ");
+    strcati(HTML_String, Set.highPWM);
+    strcat(HTML_String, " stepperhighPWMToMaxSpeedFactor: ");
+    strcati(HTML_String, Set.stepperhighPWMToMaxSpeedFactor);
     strcat(HTML_String, " stepperMaxSpeed: ");
     strcati(HTML_String, Set.stepperMaxSpeed);
-    strcat(HTML_String, " stepperlowRPMToAccelerationFactor: ");
-    strcati(HTML_String, Set.stepperlowRPMToAccelerationFactor);  
+    strcat(HTML_String, "<br>");
+    strcat(HTML_String, "lowPWM: ");
+    strcati(HTML_String, Set.lowPWM);
+    strcat(HTML_String, " stepperlowPWMToAccelerationFactor: ");
+    strcati(HTML_String, Set.stepperlowPWMToAccelerationFactor);  
     strcat(HTML_String, " stepperAcceleration: ");
     strcati(HTML_String, Set.stepperAcceleration);
+    strcat(HTML_String, "<br><br>");
   }
 
-	strcat(HTML_String, "Steerdata from AOG: Guidance Status: ");
+	strcat(HTML_String, "<b>Steerdata from AOG:</b> <br>Guidance Status: ");
 	strcati(HTML_String, guidanceStatus);
 	strcat(HTML_String, " speed: ");
 	strcati(HTML_String, gpsSpeed);
