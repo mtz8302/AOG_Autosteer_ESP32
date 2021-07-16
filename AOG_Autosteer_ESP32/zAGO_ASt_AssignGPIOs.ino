@@ -1,5 +1,6 @@
 void assignGPIOs_start_extHardware() {
 	delay(50);
+  //init GPIO pins, if 255 = unused/not connected
 
 	//WIRE I2C
 	if (Set.SDA < 255 && Set.SCL < 255) {
@@ -25,7 +26,178 @@ void assignGPIOs_start_extHardware() {
     i2cPossible = false;
   }
 
-	//init GPIO pins, if 255 = unused/not connected
+  //IMU
+  if (i2cPossible){   
+    byte error = 0; 
+    switch (Set.IMUType) {    
+    case 0:
+      //roll no hardware = 8888
+      steerToAOG[9] = 0xB8;
+      steerToAOG[10] = 0x22;
+      roll = 0;
+      //heading16 no hardware = 9999     
+      steerToAOG[7] = 0x0F;
+      steerToAOG[8] = 0x27;
+      heading = 0;
+      break;
+  
+    case 1: // BNO055 init
+      BNO.init();
+      delay(10);
+      BNO.setExtCrystalUse(true);   //use external 32K crystal
+      //roll no hardware = 8888
+      steerToAOG[9] = 0xB8;
+      steerToAOG[10] = 0x22;
+      roll = 0;
+      break;
+  
+    case 2://test if CMPS working     
+      Wire.beginTransmission(Set.CMPS14_ADDRESS);
+      error = Wire.endTransmission();
+      if (error == 0)
+      {
+        if (Set.debugmode) {
+          Serial.println("Error = 0");
+          Serial.print("CMPS14 ADDRESs: 0x");
+          Serial.println(Set.CMPS14_ADDRESS, HEX);
+          Serial.println("CMPS14 Ok.");
+        }
+      }
+      else
+      {
+        Serial.println("Error = 4");
+        Serial.print("CMPS not Connected or Found at address 0x");
+        Serial.println(Set.CMPS14_ADDRESS, HEX);
+        Set.IMUType = 0;
+      }
+      break;
+  
+    case 3:
+      for (int i = 0; i < nrBNO08xAdresses; i++)
+      {
+        bno08xAddress = Set.bno08xAddresses[i];
+  
+        Serial.print("\r\nChecking for BNO08X on ");
+        Serial.println(bno08xAddress, HEX);
+        Wire.beginTransmission(bno08xAddress);
+        error = Wire.endTransmission();
+  
+        if (error == 0)
+        {
+          Serial.println("Error = 0");
+          Serial.print("BNO08X ADDRESs: 0x");
+          Serial.println(bno08xAddress, HEX);
+          Serial.println("BNO08X Ok.");
+  
+          // Initialize BNO080 lib        
+          if (bno08x.begin(bno08xAddress))
+          {
+            Wire.setClock(400000); //Increase I2C data rate to 400kHz
+  
+            // Use gameRotationVector
+            bno08x.enableGameRotationVector(REPORT_INTERVAL); //Send data update every REPORT_INTERVAL in ms for BNO085
+  
+            // Retrieve the getFeatureResponse report to check if Rotation vector report is corectly enable
+            if (bno08x.getFeatureResponseAvailable() == true)
+            {
+              if (bno08x.checkReportEnable(SENSOR_REPORTID_GAME_ROTATION_VECTOR, REPORT_INTERVAL) == false) bno08x.printGetFeatureResponse();
+  
+              // Break out of loop
+               // useBNO08x = true;
+              break;
+            }
+            else
+            {
+              Set.IMUType = 0;
+              Serial.println("BNO08x init fails!!");
+            }
+          }
+          else
+          {
+            Serial.println("BNO080 not detected at given I2C address.");
+          }
+        }
+        else
+        {
+          Serial.println("Error = 4");
+          Serial.println("BNO08X not Connected or Found");
+        }
+      }
+      break;
+    }//switch IMU
+  
+    if (Set.MMAInstalled == 1)
+    {
+      // MMA8452 (1) Inclinometer
+      if (MMA1C.init()) {
+        delay(10);
+  
+        MMA1C.setDataRate(MMA_800hz);
+        MMA1C.setRange(MMA_RANGE_8G);
+        MMA1C.setHighPassFilter(false);
+        if (Set.debugmode) { Serial.println("MMA init OK"); }
+      }
+      else { Serial.println("MMA init fails at I2C address 1C!!"); Set.MMAInstalled = 0; }
+    }
+    else if (Set.MMAInstalled == 2)
+    {
+      // MMA8452 (1) Inclinometer
+      if (MMA1D.init()) {
+        delay(10);
+        MMA1D.setDataRate(MMA_800hz);
+        MMA1D.setRange(MMA_RANGE_8G);
+        MMA1D.setHighPassFilter(false);
+        if (Set.debugmode) { Serial.println("MMA init OK"); }
+      }
+      else { Serial.println("MMA init fails at I2C address 1D!!"); Set.MMAInstalled = 0; }
+    }
+  }
+
+  //external WAS
+  if (i2cPossible){
+    delay(50);
+    //ADS1115
+    adc.setSampleRate(ADS1115_REG_CONFIG_DR_128SPS); //128 samples per second
+    adc.setGain(ADS1115_REG_CONFIG_PGA_6_144V);
+    externalWASPossible = true;
+  }
+  else {
+    externalWASPossible = false;
+  }
+
+  //Local WAS on ESP32
+  if (Set.WAS_PIN < 255 && Set.WAS_Diff_GND_PIN < 255) {
+    localWASPossible = true;
+    pinMode(Set.WAS_PIN, INPUT);
+    pinMode(Set.WAS_Diff_GND_PIN, INPUT);
+    if (Set.debugmode) {
+      Serial.print("WAS_PIN as INPUT is set to ");
+      Serial.print(Set.WAS_PIN);
+      Serial.print(", WAS_Diff_GND_PIN as INPUT is set to ");
+      Serial.println(Set.WAS_Diff_GND_PIN);
+    }
+  }
+  else {
+    localWASPossible = false;
+    Serial.println("error local ESP32 WAS pins are NOT set in config! local WAS will not work");
+  }
+
+  //WAS
+  if (externalWASPossible || localWASPossible){
+    WASPossible = true;
+    if (Set.debugmode) {
+      Serial.println (" at least one WAS device is avaliable ");
+    }
+  }
+  else{
+    WASPossible = false;
+    Serial.println("error NO WAS pins are set in config! WAS will not work");
+  }
+
+  //if (Set.WASType == 0)  Set.WebIOSteerPosZero = 2048;                //Starting Point with ESP ADC 2048 
+  //if (Set.WASType > 0 && Set.WASType < 3)  Set.WebIOSteerPosZero = 13000;  //with ADS start with 13000 
+
+	
 #if USE_LED_BUILTIN
 	pinMode(LED_BUILTIN, OUTPUT);
   if (Set.debugmode) {
@@ -86,7 +258,7 @@ void assignGPIOs_start_extHardware() {
     }
   }
   
-  //Setup Interrupt -Steering Wheel encoder
+  //Setup Interrupt - Steering Wheel encoder
   if (Set.encA_PIN < 255 && Set.encB_PIN < 255) {
     encoderPossible = true;
   }
@@ -192,141 +364,5 @@ void assignGPIOs_start_extHardware() {
     Serial.println("Error = NO output device possible, pins are not set in config");
   }
   
-
-	//if (Set.WASType == 0)  Set.WebIOSteerPosZero = 2048;                //Starting Point with ESP ADC 2048 
-	//if (Set.WASType > 0 && Set.WASType < 3)  Set.WebIOSteerPosZero = 13000;  //with ADS start with 13000 
-
-
 	delay(50);
-
-
-	//IMU
-	byte error = 0;	
-	switch (Set.IMUType) {		
-	case 0:
-		//roll no hardware = 8888
-		steerToAOG[9] = 0xB8;
-		steerToAOG[10] = 0x22;
-		roll = 0;
-		//heading16 no hardware = 9999     
-		steerToAOG[7] = 0x0F;
-		steerToAOG[8] = 0x27;
-		heading = 0;
-		break;
-
-	case 1:	// BNO055 init
-		BNO.init();
-		delay(10);
-		BNO.setExtCrystalUse(true);   //use external 32K crystal
-		//roll no hardware = 8888
-		steerToAOG[9] = 0xB8;
-		steerToAOG[10] = 0x22;
-		roll = 0;
-		break;
-
-	case 2://test if CMPS working			
-		Wire.beginTransmission(Set.CMPS14_ADDRESS);
-		error = Wire.endTransmission();
-		if (error == 0)
-		{
-			if (Set.debugmode) {
-				Serial.println("Error = 0");
-				Serial.print("CMPS14 ADDRESs: 0x");
-				Serial.println(Set.CMPS14_ADDRESS, HEX);
-				Serial.println("CMPS14 Ok.");
-			}
-		}
-		else
-		{
-			Serial.println("Error = 4");
-			Serial.print("CMPS not Connected or Found at address 0x");
-			Serial.println(Set.CMPS14_ADDRESS, HEX);
-			Set.IMUType = 0;
-		}
-		break;
-
-	case 3:
-		for (int i = 0; i < nrBNO08xAdresses; i++)
-		{
-			bno08xAddress = Set.bno08xAddresses[i];
-
-			Serial.print("\r\nChecking for BNO08X on ");
-			Serial.println(bno08xAddress, HEX);
-			Wire.beginTransmission(bno08xAddress);
-			error = Wire.endTransmission();
-
-			if (error == 0)
-			{
-				Serial.println("Error = 0");
-				Serial.print("BNO08X ADDRESs: 0x");
-				Serial.println(bno08xAddress, HEX);
-				Serial.println("BNO08X Ok.");
-
-				// Initialize BNO080 lib        
-				if (bno08x.begin(bno08xAddress))
-				{
-					Wire.setClock(400000); //Increase I2C data rate to 400kHz
-
-					// Use gameRotationVector
-					bno08x.enableGameRotationVector(REPORT_INTERVAL); //Send data update every REPORT_INTERVAL in ms for BNO085
-
-					// Retrieve the getFeatureResponse report to check if Rotation vector report is corectly enable
-					if (bno08x.getFeatureResponseAvailable() == true)
-					{
-						if (bno08x.checkReportEnable(SENSOR_REPORTID_GAME_ROTATION_VECTOR, REPORT_INTERVAL) == false) bno08x.printGetFeatureResponse();
-
-						// Break out of loop
-					   // useBNO08x = true;
-						break;
-					}
-					else
-					{
-						Set.IMUType = 0;
-						Serial.println("BNO08x init fails!!");
-					}
-				}
-				else
-				{
-					Serial.println("BNO080 not detected at given I2C address.");
-				}
-			}
-			else
-			{
-				Serial.println("Error = 4");
-				Serial.println("BNO08X not Connected or Found");
-			}
-		}
-		break;
-	}//switch IMU
-
-	if (Set.MMAInstalled == 1)
-	{
-		// MMA8452 (1) Inclinometer
-		if (MMA1C.init()) {
-			delay(10);
-
-			MMA1C.setDataRate(MMA_800hz);
-			MMA1C.setRange(MMA_RANGE_8G);
-			MMA1C.setHighPassFilter(false);
-			if (Set.debugmode) { Serial.println("MMA init OK"); }
-		}
-		else { Serial.println("MMA init fails at I2C address 1C!!"); Set.MMAInstalled = 0; }
-	}
-	else if (Set.MMAInstalled == 2)
-	{
-		// MMA8452 (1) Inclinometer
-		if (MMA1D.init()) {
-			delay(10);
-			MMA1D.setDataRate(MMA_800hz);
-			MMA1D.setRange(MMA_RANGE_8G);
-			MMA1D.setHighPassFilter(false);
-			if (Set.debugmode) { Serial.println("MMA init OK"); }
-		}
-		else { Serial.println("MMA init fails at I2C address 1D!!"); Set.MMAInstalled = 0; }
-	}
-
-	//ADS1115
-	adc.setSampleRate(ADS1115_REG_CONFIG_DR_128SPS); //128 samples per second
-	adc.setGain(ADS1115_REG_CONFIG_PGA_6_144V);
-
 }

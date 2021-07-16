@@ -490,7 +490,7 @@ byte SectGrFromAOG[2] = { 0,0 }, Tram = 0;
 long argVal = 0;
 
 //check Services
-bool i2cPossible = false; bool stepperPossible = false; bool motorPWMPossible = false; bool outputPossible = false; bool encoderPossible = false;
+bool i2cPossible = false; bool localWASPossible = false; bool externalWASPossible = false;  bool WASPossible = false; bool stepperPossible = false; bool motorPWMPossible = false; bool outputPossible = false; bool encoderPossible = false;
 
 
 // Setup procedure -----------------------------------------------------------------------------------------------
@@ -695,7 +695,7 @@ void loop() {
 	//timed loop for WAS
 	// Loop triggers every 20 msec
 	now = millis();
-
+ 
 	if (now - WASLoopLastTime >= WAS_LOOP_TIME)
 	{
 		WASLoopLastTime = now;
@@ -707,25 +707,42 @@ void loop() {
 		//If connection lost to AgOpenGPS, the watchdog will count up and turn off steering
 		if (watchdogTimer++ > 250) watchdogTimer = 250;
 
-		//steering position and steer angle
-		switch (Set.WASType) {
-		case 1:  // ADS 1115 single
-			adc.setMux(ADS1115_REG_CONFIG_MUX_SINGLE_0);
-			steeringPosition = adc.getConversion();
-			adc.triggerConversion();
-			steeringPosition = steeringPosition >> 1; //divide by 2
-			break;
-		case 2:  // ADS 1115 differential
-			adc.setMux(ADS1115_REG_CONFIG_MUX_DIFF_0_1);
-			adc.triggerConversion();
-			steeringPosition = adc.getConversion();
-			steeringPosition = steeringPosition >> 1; //divide by 2
-			break;
-		default: // directly to arduino
-			steeringPosition = analogRead(Set.WAS_PIN);    vTaskDelay(1);
-			steeringPosition += analogRead(Set.WAS_PIN);
-			break;
-		}
+  	if (WASPossible) {
+  		//steering position and steer angle
+  		switch (Set.WASType) {
+  		case 1:  // ADS 1115 single
+        if (externalWASPossible){
+    			adc.setMux(ADS1115_REG_CONFIG_MUX_SINGLE_0);
+    			steeringPosition = adc.getConversion();
+    			adc.triggerConversion();
+    			steeringPosition = steeringPosition >> 1; //divide by 2
+        }
+        else {
+          steeringPosition = 0;
+        }
+  			break;
+  		case 2:  // ADS 1115 differential
+        if (externalWASPossible){
+    			adc.setMux(ADS1115_REG_CONFIG_MUX_DIFF_0_1);
+    			adc.triggerConversion();
+    			steeringPosition = adc.getConversion();
+    			steeringPosition = steeringPosition >> 1; //divide by 2
+        }
+        else {
+          steeringPosition = 0;
+        }
+  			break;
+  		default: // directly to arduino
+        if (localWASPossible){
+    			steeringPosition = analogRead(Set.WAS_PIN);    vTaskDelay(1);
+    			steeringPosition += analogRead(Set.WAS_PIN);
+        }
+        else {
+          steeringPosition = 0;
+        }
+  			break;
+  		}
+  	}
 		actualSteerPosRAW = steeringPosition; // stored for >zero< Funktion
 
 		//center the steering position sensor  
@@ -743,6 +760,7 @@ void loop() {
 		steerAngleActual = ((float)(steeringPosition) / Set.steerSensorCounts);
 
 	}//WAS timed loop
+
 
 
 // data timed loop
