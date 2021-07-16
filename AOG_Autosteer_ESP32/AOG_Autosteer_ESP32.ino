@@ -7,7 +7,7 @@
 // StepperDriver included additions by hagre with use of "FastAccelStepper" library made by gin66 found on https://github.com/gin66/FastAccelStepper
 // Version 0.23.2 is not included PLEASE INSTALL/DOWNLOAD with Librarymanager of the ARDUINO IDE
 
-byte vers_nr = 45;
+byte vers_nr = 46;
 char VersionTXT[120] = " - 27. Juni 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, CMPS/BNO085 and Ethernet, configFile, +StepperDriver)";
 
 //##########################################################################################################
@@ -149,8 +149,8 @@ char VersionTXT[120] = " - 27. Juni 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, 
   #define LED_WIFI_ON_LEVEL LOW                 // HIGH = LED on high, LOW = LED on low
 
   //RELAYS
-  #define RELAY_PINS {255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255} // (not supported at the moment) relais for section control
-  #define TRAM_PINS {255,255,255}             // (not supported at the moment) relais for tramline control
+  #define RELAY_PINS {PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED} // (not supported at the moment) relais for section control
+  #define TRAM_PINS {PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED} // (not supported at the moment) relais for tramline control
   #define RELAYS_ON HIGH                        // HIGH = Relay on high, LOW = Relay on low
 
   //WAS
@@ -489,6 +489,8 @@ byte SectGrFromAOG[2] = { 0,0 }, Tram = 0;
 //webpage
 long argVal = 0;
 
+//check Services
+bool i2cPossible = false; bool stepperPossible = false; bool motorPWMPossible = false; bool outputPossible = false; bool encoderPossible = false;
 
 
 // Setup procedure -----------------------------------------------------------------------------------------------
@@ -577,10 +579,12 @@ void loop() {
 
 
 	//check, if steering wheel is moved. Debounce set to LOW in timed loop 10Hz
-	if (Set.ShaftEncoder == 1) {
-		if ((digitalRead(Set.encA_PIN) != prevEncAState) && !encDebounce) { pulseCount++; encDebounce = HIGH; }
-		if ((digitalRead(Set.encB_PIN) != prevEncBState) && !encDebounce) { pulseCount++; encDebounce = HIGH; }
-	}
+  if (encoderPossible) {
+  	if (Set.ShaftEncoder == 1) {
+  		if ((digitalRead(Set.encA_PIN) != prevEncAState) && !encDebounce) { pulseCount++; encDebounce = HIGH; }
+  		if ((digitalRead(Set.encB_PIN) != prevEncBState) && !encDebounce) { pulseCount++; encDebounce = HIGH; }
+  	}
+  }
 
 	//read steer switch
 	int tempvalue = 0;

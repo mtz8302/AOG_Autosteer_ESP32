@@ -1,11 +1,29 @@
 void assignGPIOs_start_extHardware() {
 	delay(50);
 
-	//init wire for ADS and MMA or BNO or CMPS
-	if (!Wire.begin(Set.SDA, Set.SCL, 400000)) {
-		Serial.println("error INIT wire, ADS, BNO, CMPS, MMA will not work");
+	//WIRE I2C
+	if (Set.SDA < 255 && Set.SCL < 255) {
+  	//init wire for ADS and MMA or BNO or CMPS
+  	if (Wire.begin(Set.SDA, Set.SCL, 400000)) {
+  		i2cPossible = true;     
+      if (Set.debugmode) {
+        Serial.println("wire/I2C is set up");
+        Serial.print("SDA is set to ");
+        Serial.print(Set.SDA);
+        Serial.print(", SCL is set to ");
+        Serial.println(Set.SCL);
+      }
+      delay(20);
+    }
+    else {
+      Serial.println("error INIT wire, ADS, BNO, CMPS, MMA will not work");
+      i2cPossible = false;
+    }	
 	}
-	delay(20);
+  else {
+    Serial.println("error WIRE pins are NOT set in config! , ADS, BNO, CMPS, MMA will not work");
+    i2cPossible = false;
+  }
 
 	//init GPIO pins, if 255 = unused/not connected
 #if USE_LED_BUILTIN
@@ -69,82 +87,111 @@ void assignGPIOs_start_extHardware() {
   }
   
   //Setup Interrupt -Steering Wheel encoder
-  if (Set.encA_PIN < 255) { 
+  if (Set.encA_PIN < 255 && Set.encB_PIN < 255) {
+    encoderPossible = true;
+  }
+  else {
+    encoderPossible = false;
+  }
+  if (encoderPossible) { 
     pinMode(Set.encA_PIN, INPUT_PULLUP);
     if (Set.debugmode) {
-        Serial.print("encA_PIN as INPUT_PULLUP is set to ");
-        Serial.println(Set.encA_PIN);
-      } 
-  }
-  if (Set.encB_PIN < 255) { 
+      Serial.print("encA_PIN as INPUT_PULLUP is set to ");
+      Serial.println(Set.encA_PIN);
+    }  
     pinMode(Set.encB_PIN, INPUT_PULLUP);
     if (Set.debugmode) {
-        Serial.print("encB_PIN as INPUT_PULLUP is set to ");
-        Serial.println(Set.encB_PIN);
+      Serial.print("encB_PIN as INPUT_PULLUP is set to ");
+      Serial.println(Set.encB_PIN);
     } 
   }
 
-  if (Set.output_type == 5){ //stepper  
-    if (Set.stepperEnableSafetyPIN < 255) { 
-      pinMode(Set.stepperEnableSafetyPIN, OUTPUT);
-      digitalWrite (Set.stepperEnableSafetyPIN, HIGH); //Is set HIGH now for safety, LOW will be to enable
-      if (Set.debugmode) {
-        Serial.print("stepperEnableSafetyPIN is set to ");
-        Serial.println(Set.stepperEnableSafetyPIN);
-      }
+  //stepper
+  if (Set.stepperDirPIN < 255 < 255 && Set.stepperStepPIN < 255 && Set.stepperEnablePIN < 255 && Set.stepperEnableSafetyPIN < 255) {
+    stepperPossible = true;
+    if (Set.debugmode) {
+      Serial.println("stepper possible, pins are set");
     }
-    else {
-      if (Set.debugmode) {
-        Serial.println("Error = USE STEPPER WITHOUT stepperEnableSafetyPIN NOT POSSIBLE");
-      }
+  }
+  else {
+    stepperPossible = false;
+    Serial.println("Error = use of stepper NOT possible, pins are not set in config");
+  }
+ 
+  if (stepperPossible) { 
+    pinMode(Set.stepperEnableSafetyPIN, OUTPUT);
+    digitalWrite (Set.stepperEnableSafetyPIN, HIGH); //Is set HIGH now for safety, LOW will be to enable
+    if (Set.debugmode) {
+      Serial.print("stepperEnableSafetyPIN is set to ");
+      Serial.println(Set.stepperEnableSafetyPIN);
     }
-    
-    engine.init();
-    if (Set.stepperStepPIN < 255) { 
-      stepper = engine.stepperConnectToPin(Set.stepperStepPIN);
-      if (Set.debugmode) {
-        Serial.print("stepperStepPIN is set to ");
-        Serial.println(Set.stepperStepPIN);
-      }
-    }
-    else {
-      if (Set.debugmode) {
-        Serial.println("Error = USE STEPPER WITHOUT stepperStepPIN NOT POSSIBLE");
-      }
+  
+    engine.init(); 
+    stepper = engine.stepperConnectToPin(Set.stepperStepPIN);
+    if (Set.debugmode) {
+      Serial.print("stepperStepPIN is set to ");
+      Serial.println(Set.stepperStepPIN);
     }
     
-    if (Set.stepperEnablePIN < 255) { 
-      stepper->setEnablePin(Set.stepperEnablePIN, true); //High to enable
-      stepper->setAutoEnable(false);
-      // If auto enable/disable need delays, just add (one or both):
-      // stepper->setDelayToEnable(50);
-      // stepper->setDelayToDisable(1000);
-      stepper->disableOutputs();
+    stepper->setEnablePin(Set.stepperEnablePIN, true); //High to enable
+    stepper->setAutoEnable(false);
+    // If auto enable/disable need delays, just add (one or both):
+    // stepper->setDelayToEnable(50);
+    // stepper->setDelayToDisable(1000);
+    stepper->disableOutputs();
+
+    if (Set.MotorDriveDirection == 1){
+      stepper->setDirectionPin(Set.stepperDirPIN, true);
     }
     else {
-      if (Set.debugmode) {
-        Serial.println("Error = USE STEPPER WITHOUT stepperEnablePIN NOT POSSIBLE");
-      }
+      stepper->setDirectionPin(Set.stepperDirPIN, false);
+    }
+    if (Set.debugmode) {
+      Serial.print("stepperDirPIN is set to ");
+      Serial.println(Set.stepperDirPIN);
     }
     
     UpdateStepperSettings ();
- }
-  else { //Soething other than StepperMotor
-    if (Set.PWM_PIN < 255) { 
-      pinMode(Set.PWM_PIN, OUTPUT); 
-      delay(2);
-      ledcSetup(0, Set.PWMOutFrequ, 8);  // PWM Output with channel 0, x kHz, 8-bit resolution (0-255)
-      delay(2);
-      ledcAttachPin(Set.PWM_PIN, 0);  // attach PWM PIN to Channel 0
-      }
-    if (Set.DIR_PIN < 255) { 
-      pinMode(Set.DIR_PIN, OUTPUT);
-    	delay(2);
-    	ledcSetup(1, Set.PWMOutFrequ, 8);  // PWM Output with channel 1, x kHz, 8-bit resolution (0-255)
-    	delay(2);
-    	ledcAttachPin(Set.DIR_PIN, 1);  // attach PWM PIN to Channel 1
+  }
+
+  //motor/PWM
+  if (Set.PWM_PIN < 255 && Set.DIR_PIN < 255) {
+    motorPWMPossible = true;
+    if (Set.debugmode) {
+      Serial.println("motor/PWM possible, pins are set");
     }
   }
+  else {
+    motorPWMPossible = false;
+    Serial.println("Error = use of motor/PWM NOT possible, pins are not set in config");  
+  }
+  
+  if (motorPWMPossible) { 
+    pinMode(Set.PWM_PIN, OUTPUT); 
+    delay(2);
+    ledcSetup(0, Set.PWMOutFrequ, 8);  // PWM Output with channel 0, x kHz, 8-bit resolution (0-255)
+    delay(2);
+    ledcAttachPin(Set.PWM_PIN, 0);  // attach PWM PIN to Channel 0
+
+    pinMode(Set.DIR_PIN, OUTPUT);
+  	delay(2);
+  	ledcSetup(1, Set.PWMOutFrequ, 8);  // PWM Output with channel 1, x kHz, 8-bit resolution (0-255)
+  	delay(2);
+  	ledcAttachPin(Set.DIR_PIN, 1);  // attach PWM PIN to Channel 1
+  }
+
+  //output
+  if (motorPWMPossible || stepperPossible){
+    outputPossible = true;
+    if (Set.debugmode) {
+      Serial.println (" at least one output device is avaliable ");
+    }
+  }
+  else {
+    outputPossible = false;
+    Serial.println("Error = NO output device possible, pins are not set in config");
+  }
+  
 
 	//if (Set.WASType == 0)  Set.WebIOSteerPosZero = 2048;                //Starting Point with ESP ADC 2048 
 	//if (Set.WASType > 0 && Set.WASType < 3)  Set.WebIOSteerPosZero = 13000;  //with ADS start with 13000 

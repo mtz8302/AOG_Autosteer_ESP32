@@ -220,31 +220,34 @@ void process_Request()
 			}
 		}
 		if (WiFi_Server.argName(n) == "OUTPUT_TYPE") { 
-		  byte tempOutputType = byte(WiFi_Server.arg(n).toInt());
-      if ((tempOutputType == 5 && Set.output_type != 5) || (tempOutputType != 5 && Set.output_type == 5)){
-        Set.output_type = tempOutputType;
-        //EEprom_write_all();
-      }
-      else {
+		  byte tempOutputType = byte(WiFi_Server.arg(n).toInt());    
+      if (tempOutputType == 0){
         Set.output_type = tempOutputType;
       }
+      else if ((tempOutputType == 1 || tempOutputType == 2 || tempOutputType == 3 || tempOutputType == 4) && motorPWMPossible){
+        Set.output_type = tempOutputType;
+      }
+      else if (tempOutputType == 5 && stepperPossible){
+        Set.output_type = tempOutputType;
+      }
+      Serial.println("output type reconfigured");
 		}
 		if (WiFi_Server.argName(n) == "invMotor") {
 			if (WiFi_Server.arg(n) == "true") {
 			  if (Set.MotorDriveDirection == 0) {
-          Set.MotorDriveDirection = 1;
-          UpdateStepperSettings ();
-          EEprom_write_all();
+          Set.MotorDriveDirection = 1;      
 			  }
 			}
 			else { //WiFi_Server.arg(n) == "false"
         if (Set.MotorDriveDirection == 1) {
           Set.MotorDriveDirection = 0;
-          UpdateStepperSettings ();
-          EEprom_write_all();
         }
 			}
+      if (stepperPossible){
+        UpdateStepperSettings ();
+      }
 		}
+   
 		if (WiFi_Server.argName(n) == "PWMFreq") {
 			argVal = int(WiFi_Server.arg(n).toInt());
 			if ((argVal <= 20000) && (argVal >= 20)) { Set.PWMOutFrequ = int(argVal); }
@@ -291,7 +294,16 @@ void process_Request()
 			Set.roll_corr = roll_avg >> 4;
 			EEprom_write_all();
 		}
-		if (WiFi_Server.argName(n) == "ENC_TYPE") { Set.ShaftEncoder = byte(WiFi_Server.arg(n).toInt()); }
+		if (WiFi_Server.argName(n) == "ENC_TYPE") { 
+		  if (WiFi_Server.arg(n).toInt() == 1 && encoderPossible){
+        Set.ShaftEncoder = 1;
+        Serial.println("encoder type reconfigured");
+		  }
+      else {
+        Set.ShaftEncoder = 0;
+        Serial.println("encoder type 0");
+      }
+		}
 		if (WiFi_Server.argName(n) == "ENC_COUNTS") { Set.pulseCountMax = byte(WiFi_Server.arg(n).toInt()); }
 		if (WiFi_Server.argName(n) == "SSWITCH_TYPE") { 
 			Set.SteerSwitchType = byte(WiFi_Server.arg(n).toInt());
@@ -672,7 +684,7 @@ void make_HTML01() {
 
 	for (int i = 0; i < 2; i++) {
 		strcat(HTML_String, "<tr>");
-		if (i == 0)  strcat(HTML_String, "<td><b>Encoder:</b></td>");
+		if (i == 0)  strcat(HTML_String, "<td><b>Encoder:</b> (Can only be selected if pins are set in config)</td>");
 		else strcat(HTML_String, "<td> </td>");
 		strcat(HTML_String, "<td><input type = \"radio\" onclick=\"sendVal('/?ENC_TYPE=");
 		strcati(HTML_String, i);
@@ -715,7 +727,7 @@ void make_HTML01() {
 
 	for (int i = 0; i < 6; i++) {
 		strcat(HTML_String, "<tr>");
-		if (i == 0)  strcat(HTML_String, "<td><b>Select your output type </b> (If you toggle during runtime between Stepper Driver and an other option, the Autosteerboard will reboot automatically without saving data to eeprom due to an race condition in the software! PLEASE COMPILE WITH STEPPER AS DEFAULT IF NEEDET </td>");
+		if (i == 0)  strcat(HTML_String, "<td><b>Select your output type </b> (To toggle between motor options is only possible when coresponding pins are defined)</td>");
 		else if (i == 1) strcat(HTML_String, "<td>SWM: Steer Wheel Motor</td>");
 		else strcat(HTML_String, "<td> </td>");
 		strcat(HTML_String, "<td><input type = \"radio\" onclick=\"sendVal('/?OUTPUT_TYPE=");

@@ -1,11 +1,11 @@
 #ifdef USE_CUSTOM_SETTINGS
   //general settings
-  #define EEPROM_CLEAR true                    //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again
+  #define EEPROM_CLEAR false                     //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again
 
   #define AOG_VERSION 20                        // Version number for version check 4.3.10 = 4+3+10 = 17  
   #define DATA_TRANS_VIA 7                      // transfer data via 0 = USB / 7 = WiFi UDP / 10 = Ethernet UDP
 
-  #define DEBUG_MODE true
+  #define DEBUG_MODE false
   #define DEBUG_MODE_DATA_FROM_AOG false
   
   #define USE_LED_BUILTIN 0                     // some ESP board have a build in LED, some not. Here it's the same funtion as the WiFi LED
@@ -82,7 +82,7 @@
   
   //WiFi
   #define WIFI_SSID "TS115_WLAN"                // WiFi network Client name
-  #define WIFI_PASSWORD ""                      // WiFi network password
+  #define WIFI_PASSWORD "TS115_WLAN"                      // WiFi network password
   #define WIFI_SSID_AP "Autosteer_Unit_TS115"   // name of Access point, if no WiFi found, NO password!!
   #define WIFI_TIMEOUT_ROUTER 30                // time (seconds) to wait for WIFI access, after that own Access Point starts
   #define WIFI_TIMEOUT_TIMEOUT_WEBIO 255        // time (min) afterwards webinterface is switched off
@@ -114,8 +114,8 @@
   #define LED_WIFI_ON_LEVEL HIGH                // HIGH = LED on high, LOW = LED on low
 
   //RELAYS
-  #define RELAY_PINS {255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255} // (not supported at the moment) relais for section control
-  #define TRAM_PINS {255,255,255}               // (not supported at the moment) relais for tramline control
+  #define RELAY_PINS {PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED} // (not supported at the moment) relais for section control
+  #define TRAM_PINS {PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED} // (not supported at the moment) relais for tramline control
   #define RELAYS_ON HIGH                        // HIGH = Relay on high, LOW = Relay on low
 
   //WAS

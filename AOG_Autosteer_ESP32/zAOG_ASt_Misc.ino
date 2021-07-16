@@ -16,39 +16,37 @@ void UpdateStepperSettings (){
 
   //set values
  
-  if (Set.stepperDirPIN < 255) {
-     if (Set.MotorDriveDirection == 1){
-        stepper->setDirectionPin(Set.stepperDirPIN, true);
-        if (Set.debugmode) {
-          Serial.print("stepperDirPIN (HIGH counts up) is set to ");
-          Serial.println(Set.stepperDirPIN);
-        }
+  if (stepperPossible) {
+    if (Set.MotorDriveDirection == 1){
+      stepper->setDirectionPin(Set.stepperDirPIN, true);
+      if (Set.debugmode) {
+        Serial.print("stepperDirPIN (HIGH counts up) is set to ");
+        Serial.println(Set.stepperDirPIN);
       }
-      else {
-        stepper->setDirectionPin(Set.stepperDirPIN, false);
-        if (Set.debugmode) {
-          Serial.print("stepperStepPIN (LOW counts up) is set to ");
-          Serial.println(Set.stepperDirPIN);
-        }
+    }
+    else {
+      stepper->setDirectionPin(Set.stepperDirPIN, false);
+      if (Set.debugmode) {
+        Serial.print("stepperStepPIN (LOW counts up) is set to ");
+        Serial.println(Set.stepperDirPIN);
       }
-  }
+    }
   
-  stepper->setSpeedInHz(Set.stepperMaxSpeed); 
-  stepper->setAcceleration(Set.stepperAcceleration);
-  
-  if (Set.debugmode) { 
-    Serial.println("Update StepperSettings: "); 
-    Serial.print("stepPerPositionDegree: ");
-    Serial.println(stepPerPositionDegree); 
-    Serial.print("stepperMaxSpeed: ");
-    Serial.println(Set.stepperMaxSpeed); 
-    Serial.print("stepperAcceleration: ");
-    Serial.println(Set.stepperAcceleration); 
-    Serial.print("MotorDriveDirection: ");
-    Serial.println(Set.MotorDriveDirection);
+    stepper->setSpeedInHz(Set.stepperMaxSpeed); 
+    stepper->setAcceleration(Set.stepperAcceleration);
+    
+    if (Set.debugmode) { 
+      Serial.println("Update StepperSettings: "); 
+      Serial.print("stepPerPositionDegree: ");
+      Serial.println(stepPerPositionDegree); 
+      Serial.print("stepperMaxSpeed: ");
+      Serial.println(Set.stepperMaxSpeed); 
+      Serial.print("stepperAcceleration: ");
+      Serial.println(Set.stepperAcceleration); 
+      Serial.print("MotorDriveDirection: ");
+      Serial.println(Set.MotorDriveDirection);
+    }
   }
-
-
 }
 
 //-------------------------------------------------------------------------------------------------
