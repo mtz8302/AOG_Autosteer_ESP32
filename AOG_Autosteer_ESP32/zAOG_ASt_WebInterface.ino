@@ -8,7 +8,7 @@ char HTML_String[40000];
 #define ACTION_SET_WS_THRESHOLD 5
 
 // Radiobutton output
-char output_driver_tab[5][22] = { "None", "Cytron MD30 + SWM", "IBT_2 +SWM", "IBT_2 +PWM Valve", "IBT_2 +Danfoss Valve" };
+char output_driver_tab[6][22] = { "None", "Cytron MD30 + SWM", "IBT_2 +SWM", "IBT_2 +PWM Valve", "IBT_2 +Danfoss Valve", "Stepper Driver" };
 
 // Radiobutton analog input
 char was_input_tab[3][25] = { "direct to ESP PIN", "ADS 1115 single", "ADS 1115 differential" };
@@ -219,11 +219,35 @@ void process_Request()
 				}
 			}
 		}
-		if (WiFi_Server.argName(n) == "OUTPUT_TYPE") { Set.output_type = byte(WiFi_Server.arg(n).toInt()); }
-		if (WiFi_Server.argName(n) == "invMotor") {
-			if (WiFi_Server.arg(n) == "true") { Set.MotorDriveDirection = 1; }
-			else { Set.MotorDriveDirection = 0; }
+		if (WiFi_Server.argName(n) == "OUTPUT_TYPE") { 
+		  byte tempOutputType = byte(WiFi_Server.arg(n).toInt());    
+      if (tempOutputType == 0){
+        Set.output_type = tempOutputType;
+      }
+      else if ((tempOutputType == 1 || tempOutputType == 2 || tempOutputType == 3 || tempOutputType == 4) && motorPWMPossible){
+        Set.output_type = tempOutputType;
+      }
+      else if (tempOutputType == 5 && stepperPossible){
+        Set.output_type = tempOutputType;
+      }
+      Serial.println("output type reconfigured");
 		}
+		if (WiFi_Server.argName(n) == "invMotor") {
+			if (WiFi_Server.arg(n) == "true") {
+			  if (Set.MotorDriveDirection == 0) {
+          Set.MotorDriveDirection = 1;      
+			  }
+			}
+			else { //WiFi_Server.arg(n) == "false"
+        if (Set.MotorDriveDirection == 1) {
+          Set.MotorDriveDirection = 0;
+        }
+			}
+      if (stepperPossible){
+        UpdateStepperSettings ();
+      }
+		}
+   
 		if (WiFi_Server.argName(n) == "PWMFreq") {
 			argVal = int(WiFi_Server.arg(n).toInt());
 			if ((argVal <= 20000) && (argVal >= 20)) { Set.PWMOutFrequ = int(argVal); }
@@ -270,7 +294,16 @@ void process_Request()
 			Set.roll_corr = roll_avg >> 4;
 			EEprom_write_all();
 		}
-		if (WiFi_Server.argName(n) == "ENC_TYPE") { Set.ShaftEncoder = byte(WiFi_Server.arg(n).toInt()); }
+		if (WiFi_Server.argName(n) == "ENC_TYPE") { 
+		  if (WiFi_Server.arg(n).toInt() == 1 && encoderPossible){
+        Set.ShaftEncoder = 1;
+        Serial.println("encoder type reconfigured");
+		  }
+      else {
+        Set.ShaftEncoder = 0;
+        Serial.println("encoder type 0");
+      }
+		}
 		if (WiFi_Server.argName(n) == "ENC_COUNTS") { Set.pulseCountMax = byte(WiFi_Server.arg(n).toInt()); }
 		if (WiFi_Server.argName(n) == "SSWITCH_TYPE") { 
 			Set.SteerSwitchType = byte(WiFi_Server.arg(n).toInt());
@@ -651,7 +684,7 @@ void make_HTML01() {
 
 	for (int i = 0; i < 2; i++) {
 		strcat(HTML_String, "<tr>");
-		if (i == 0)  strcat(HTML_String, "<td><b>Encoder:</b></td>");
+		if (i == 0)  strcat(HTML_String, "<td><b>Encoder:</b> (Can only be selected if pins are set in config)</td>");
 		else strcat(HTML_String, "<td> </td>");
 		strcat(HTML_String, "<td><input type = \"radio\" onclick=\"sendVal('/?ENC_TYPE=");
 		strcati(HTML_String, i);
@@ -692,9 +725,9 @@ void make_HTML01() {
 	strcat(HTML_String, "<table>");
 	set_colgroup(300, 250, 150, 0, 0);
 
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < 6; i++) {
 		strcat(HTML_String, "<tr>");
-		if (i == 0)  strcat(HTML_String, "<td><b>Select your output type</b></td>");
+		if (i == 0)  strcat(HTML_String, "<td><b>Select your output type </b> (To toggle between motor options is only possible when coresponding pins are defined)</td>");
 		else if (i == 1) strcat(HTML_String, "<td>SWM: Steer Wheel Motor</td>");
 		else strcat(HTML_String, "<td> </td>");
 		strcat(HTML_String, "<td><input type = \"radio\" onclick=\"sendVal('/?OUTPUT_TYPE=");
@@ -1142,31 +1175,96 @@ void make_HTML01() {
 	strcat(HTML_String, "<h2>Debug</h2><hr>");
 
 	//debug values
-	strcat(HTML_String, "Settingsdata from AOG: Ackermann: ");
+	strcat(HTML_String, "<b>Settingsdata from AOG:</b> <br>Ackermann: ");
 	strcati(HTML_String, Set.AckermanFix);
-	strcat(HTML_String, " sensorCounts: ");
+	strcat(HTML_String, ", sensorCounts: ");
 	strcati(HTML_String, Set.steerSensorCounts);
 	//strcat(HTML_String, " WASoffset: ");
 	//strcati(HTML_String, Set.wasOffset);
 	strcat(HTML_String, "<br>minPWM: ");
 	strcati(HTML_String, Set.minPWM);
-	strcat(HTML_String, " lowPWM: ");
+	strcat(HTML_String, ", lowPWM: ");
 	strcati(HTML_String, Set.lowPWM);
-	strcat(HTML_String, " high PWM: ");
+	strcat(HTML_String, ", high PWM: ");
 	strcati(HTML_String, Set.highPWM);
 	strcat(HTML_String, "<br><br>");
+  
+  if (Set.output_type == 5){ //stepper
+    strcat(HTML_String, "<b>Stepper Values:</b> <br>");
+    strcat(HTML_String, "Kp: ");
+    strcati(HTML_String, Set.Kp);
+    strcat(HTML_String, ", stepperKpToDegreesFactor: ");
+    strcati(HTML_String, Set.stepperKpToDegreesFactor);   
+    strcat(HTML_String, ", stepPerPositionDegree: ");
+    strcati(HTML_String, stepPerPositionDegree);
+    strcat(HTML_String, "<br>");
+    strcat(HTML_String, "high PWM: ");
+    strcati(HTML_String, Set.highPWM);
+    strcat(HTML_String, ", stepperhighPWMToMaxSpeedFactor: ");
+    strcati(HTML_String, Set.stepperhighPWMToMaxSpeedFactor);
+    strcat(HTML_String, ", stepperMaxSpeed: ");
+    strcati(HTML_String, Set.stepperMaxSpeed);
+    strcat(HTML_String, "<br>");
+    strcat(HTML_String, "lowPWM: ");
+    strcati(HTML_String, Set.lowPWM);
+    strcat(HTML_String, ", stepperlowPWMToAccelerationFactor: ");
+    strcati(HTML_String, Set.stepperlowPWMToAccelerationFactor);  
+    strcat(HTML_String, ", stepperAcceleration: ");
+    strcati(HTML_String, Set.stepperAcceleration);
+    strcat(HTML_String, "<br><br>");
+  }
 
-	strcat(HTML_String, "Steerdata from AOG: Guidance Status: ");
+	strcat(HTML_String, "<b>Steerdata from AOG:</b> <br>Guidance Status: ");
 	strcati(HTML_String, guidanceStatus);
-	strcat(HTML_String, " speed: ");
+	strcat(HTML_String, ", speed: ");
 	strcati(HTML_String, gpsSpeed);
 	strcat(HTML_String, "<br>SteerAngleSetPoint: ");
 	strcati(HTML_String, steerAngleSetPoint);
-	strcat(HTML_String, " SectGrFromAOG[0]: ");
+	strcat(HTML_String, ", SectGrFromAOG[0]: ");
 	strcati(HTML_String, SectGrFromAOG[0]);
-	strcat(HTML_String, " SectGrFromAOG[1]: ");
+	strcat(HTML_String, ", SectGrFromAOG[1]: ");
 	strcati(HTML_String, SectGrFromAOG[1]);
-	strcat(HTML_String, "<br><hr>");
+	strcat(HTML_String, "<br><br>");
+
+  strcat(HTML_String, "<b>PINs:</b> (255 == NOT_DEFINED)<br>I2C - SDA: ");
+  strcati(HTML_String, Set.SDA);
+  strcat(HTML_String, ", SCL: ");
+  strcati(HTML_String, Set.SCL);
+  strcat(HTML_String, "<br>WAS(local pins) - WAS_PIN: ");
+  strcati(HTML_String, Set.WAS_PIN);
+  strcat(HTML_String, ", WAS_Diff_GND_PIN: ");
+  strcati(HTML_String, Set.WAS_Diff_GND_PIN);
+  strcat(HTML_String, " <br>Switches - WORKSW_PIN: ");
+  strcati(HTML_String, Set.WORKSW_PIN);
+  strcat(HTML_String, ", STEERSW_PIN: ");
+  strcati(HTML_String, Set.STEERSW_PIN);
+  strcat(HTML_String, " <br>DCMotor - PWM_PIN: ");
+  strcati(HTML_String, Set.PWM_PIN);
+  strcat(HTML_String, ", DIR_PIN: ");
+  strcati(HTML_String, Set.DIR_PIN);
+  strcat(HTML_String, " <br>Stepper - stepperStepPIN: ");
+  strcati(HTML_String, Set.stepperStepPIN);
+  strcat(HTML_String, ", stepperDirPIN: ");
+  strcati(HTML_String, Set.stepperDirPIN);
+  strcat(HTML_String, ", stepperEnablePIN: ");
+  strcati(HTML_String, Set.stepperEnablePIN);
+  strcat(HTML_String, ", stepperEnableSafetyPIN: ");
+  strcati(HTML_String, Set.stepperEnableSafetyPIN);
+  strcat(HTML_String, " <br>Current Sensor - Current_sens_PIN: ");
+  strcati(HTML_String, Set.Current_sens_PIN);
+  strcat(HTML_String, " <br>Servo - Servo_PIN: ");
+  strcati(HTML_String, Set.Servo_PIN);
+  strcat(HTML_String, " <br>Ethernet - Eth_CS_PIN: ");
+  strcati(HTML_String, Set.Eth_CS_PIN);
+  strcat(HTML_String, " <br>CAN - CAN_RX_PIN: ");
+  strcati(HTML_String, Set.CAN_RX_PIN);
+  strcat(HTML_String, ", CAN_TX_PIN: ");
+  strcati(HTML_String, Set.CAN_TX_PIN);
+  strcat(HTML_String, " <br>LEDs - AutosteerLED_PIN: ");
+  strcati(HTML_String, Set.AutosteerLED_PIN);
+  strcat(HTML_String, ", LEDWiFi_PIN: ");
+  strcati(HTML_String, Set.LEDWiFi_PIN);
+  strcat(HTML_String, "<br><hr>");
 
 	strcat(HTML_String, "<form>");
 	strcat(HTML_String, "<table>");

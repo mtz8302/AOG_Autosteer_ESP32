@@ -4,9 +4,11 @@
 // PINs for GormR central unit PCB (V1.8) see GitHub https://github.com/GormR/HW_for_AgOpenGPS
 // by MTZ8302 see GitHub https://github.com/mtz8302 and Youtube Ma Ha MTZ8302 https://www.youtube.com/channel/UCv44DlUXQJKbQjzaOUssVgw
 // some small additions by hagre 
+// StepperDriver included additions by hagre with use of "FastAccelStepper" library made by gin66 found on https://github.com/gin66/FastAccelStepper
+// Version 0.23.2 is not included PLEASE INSTALL/DOWNLOAD with Librarymanager of the ARDUINO IDE
 
-byte vers_nr = 44;
-char VersionTXT[120] = " - 27. Juni 2021 by MTZ8302 + hagre <br>(V4.3 + V5 ready, CMPS/BNO085 and Ethernet support, +customSetting File)";
+byte vers_nr = 46;
+char VersionTXT[120] = " - 16. Juli 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, CMPS/BNO085 and Ethernet, configFile, +StepperDriver)";
 
 //##########################################################################################################
 //### Setup Zone ###########################################################################################
@@ -17,19 +19,21 @@ char VersionTXT[120] = " - 27. Juni 2021 by MTZ8302 + hagre <br>(V4.3 + V5 ready
 //
 //##########################################################################################################
 
-//to do: 230 not called in V20, steerPostionZero from AOG is ignorred, only zero button in WebIO working 
+//to do: 230 not called in V20
 
+
+// A RESET IS NEEDED AFTER SWITCHING TO OR FROM STEPPER OUTPUT during runtime (via AOG or WebIO)!
 
 //##########################################################################################################
 //If you want to use your personal Settings including the PINs definition for compiling (for custom Bord designs,...) uncomment the following
-//#define USE_CUSTOM_SETTINGS
+#define USE_CUSTOM_SETTINGS
 //##########################################################################################################
+#define PIN_UNDEFINED 255
 
 #ifdef USE_CUSTOM_SETTINGS
   #include "mySettings.h"
 #else
 // Default Values/Settings by MTZ8302
-  
 //general settings
   #define EEPROM_CLEAR false                    //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again
 
@@ -39,7 +43,7 @@ char VersionTXT[120] = " - 27. Juni 2021 by MTZ8302 + hagre <br>(V4.3 + V5 ready
   #define DEBUG_MODE false
   #define DEBUG_MODE_DATA_FROM_AOG false
   
-  #define USE_LED_BUILTIN  0                     // some ESP board have a build in LED, some not. Here it's the same funtion as the WiFi LED
+  #define USE_LED_BUILTIN 0                     // some ESP board have a build in LED, some not. Here it's the same funtion as the WiFi LED
 
 //Features
   //MOTOR/OUTPUT  
@@ -47,9 +51,13 @@ char VersionTXT[120] = " - 27. Juni 2021 by MTZ8302 + hagre <br>(V4.3 + V5 ready
                                                 // set to 2  if you want to use Stering Motor + IBT 2  Driver
                                                 // set to 3  if you want to use IBT 2  Driver + PWM 2-Coil Valve
                                                 // set to 4  if you want to use  IBT 2  Driver + Danfoss Valve PVE A/H/M
+                                                // set to 5  if you want to use an (CLOSED LOOP) STEPPER DRIVER
   #define MOTOR_DRIVE_DIRECTION 0               // 0 = normal, 1 = inverted
   #define MOTOR_SLOW_DRIVE_DEGREES 5            // How many degrees before decreasing Max PWM
   #define PWM_OUT_FREQU 20000                   // PWM frequency for motordriver: 1000Hz:for low heat at PWM device 20000Hz: not hearable
+  #define STEPPER_KP_TO_DEGREES_FACTOR 10       // when setting Kp by WebIO or AGO the stepper-steps per degree WAS will be recalculated "stepPerPositionDegree = Kp * STEPPER_KP_TO_DEGREES_FACTOR" to make it adjustable the common and easy way
+  #define STEPPER_HIGHPWM_TO_MAXSPEED_FACTOR 50 // when setting highRPM by WebIO or AGO the stepper-maxSpeed will be recalculated "maxSpeed = highRPM * STEPPER_HIGHRPM_TO_MAXSPEED_FACTOR" to make it adjustable the common and easy way
+  #define STEPPER_LOWPWM_TO_ACCELERATION_FACTOR 50 // when setting lowRPM by WebIO or AGO the stepper-acceleration will be recalculated "acceleration = lowRPM * STEPPER_LOWRPM_TO_ACCELERATION_FACTOR" to make it adjustable the common and easy way
 
   //WAS
   #define WAS_TYPE 2                            // 0 = No ADS installed, Wheel Angle Sensor connected directly to ESP at GPIO 36 (pin set below) (attention 3,3V only)
@@ -72,8 +80,8 @@ char VersionTXT[120] = " - 27. Juni 2021 by MTZ8302 + hagre <br>(V4.3 + V5 ready
   #define AUTOTSTEER_MAX_SPEED 30                // Max speed to use autosteer km/h
 
   //IMU/COMPAS
-  #define IMU_TYPE 0                            // 0: none, 1: BNO055 IMU, 2: CMPS14, 3: BNO080 + BNO085 
-  #define INVERT_ROLL 0                         // 0: no, set to 1 to change roll direction
+  #define IMU_TYPE 0                             // 0: none, 1: BNO055 IMU, 2: CMPS14, 3: BNO080 + BNO085 
+  #define INVERT_ROLL 0                          // 0: no, set to 1 to change roll direction
     //CMPS14  
     #define I2C_CMPS14_ADDRESS 0x60               // Address of CMPS14 shifted right one bit for arduino wire library
     #define CMPS14_HEADING_CORRECTION 0.0         // not used at the moment
@@ -141,8 +149,8 @@ char VersionTXT[120] = " - 27. Juni 2021 by MTZ8302 + hagre <br>(V4.3 + V5 ready
   #define LED_WIFI_ON_LEVEL LOW                 // HIGH = LED on high, LOW = LED on low
 
   //RELAYS
-  #define RELAY_PINS {255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255} // (not supported at the moment) relais for section control
-  #define TRAM_PINS {255,255,255}             // (not supported at the moment) relais for tramline control
+  #define RELAY_PINS {PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED} // (not supported at the moment) relais for section control
+  #define TRAM_PINS {PIN_UNDEFINED,PIN_UNDEFINED,PIN_UNDEFINED} // (not supported at the moment) relais for tramline control
   #define RELAYS_ON HIGH                        // HIGH = Relay on high, LOW = Relay on low
 
   //WAS
@@ -158,14 +166,18 @@ char VersionTXT[120] = " - 27. Juni 2021 by MTZ8302 + hagre <br>(V4.3 + V5 ready
   #define ENC_B_PIN 32                          // Pin for steer encoder, to turn off autosteer if steering wheel is used
 
   //SERVO
-  #define SERVO_PIN 16                          // (not supported at the moment) Pin for servo to pull motor to steering wheel
+  #define SERVO_PIN PIN_UNDEFINED               // (not supported at the moment) Pin for servo to pull motor to steering wheel
 
   //MOTOR
   #define LOCAL_PWM_PIN 27                      // PWM Output to motor controller (IBT2 or cytron)
   #define LOCAL_DIR_PIN 26                      // direction output to motor controller (IBT2 or cytron)
+  #define STEPPER_DIR_PIN  26 
+  #define STEPPER_STEP_PULSES_PIN  27 
+  #define STEPPER_ENABLE_PIN 16
+  #define STEPPER_ENABLE_SAFETY_PIN 25
   
   //CURRENT SENSOR
-  #define CURRENT_SENSE_PIN 35                  // (not supported at the moment) current sensor for IBT2 to read the force needed to turn steering wheel
+  #define CURRENT_SENSE_PIN PIN_UNDEFINED       // (not supported at the moment) current sensor for IBT2 to read the force needed to turn steering wheel
 
   //ETHERNET
   #define ETHERNET_CS_PIN 5                     // CS PIN with SPI Ethernet hardware  SPI config: MOSI 23 / MISO 19 / CLK18 / CS5
@@ -182,7 +194,7 @@ char VersionTXT[120] = " - 27. Juni 2021 by MTZ8302 + hagre <br>(V4.3 + V5 ready
   #define KP 20.0f                              //proportional gain  
   #define KI 0.001f                             //integral gain
   #define KD 1.0f                               //derivative gain 
-  #define AOG_STEER_POSITION_ZERO 0
+  #define AOG_STEER_POSITION_ZERO 0             // keep value to 0, needed to keep WEBIO and AGIO zero function working
   #define STEER_SENSOR_COUNTS 100
   #define ROLL_CORR 200
   #define MIN_PWM 40
@@ -226,13 +238,19 @@ struct Storage {
 									                                   // set to 2  if you want to use Stering Motor + IBT 2  Driver
 											                     					 // set to 3  if you want to use IBT 2  Driver + PWM 2-Coil Valve
 													                     			 // set to 4  if you want to use  IBT 2  Driver + Danfoss Valve PVE A/H/M
-
+                                                     // set to 5  if you want to use an CLOSED LOOP STEPPER DRIVER
 
 	uint16_t PWMOutFrequ = PWM_OUT_FREQU;              // PWM frequency for motordriver: 1000Hz:for low heat at PWM device 20000Hz: not hearable
 
 	uint8_t	MotorDriveDirection = MOTOR_DRIVE_DIRECTION; // 0 = normal, 1 = inverted
 
-	uint8_t MotorSlowDriveDegrees = MOTOR_SLOW_DRIVE_DEGREES;	// How many degrees before decreasing Max PWM
+	uint8_t MotorSlowDriveDegrees = MOTOR_SLOW_DRIVE_DEGREES;	// How many degrees before decreasing Max PWM 
+
+  uint16_t stepperKpToDegreesFactor = STEPPER_KP_TO_DEGREES_FACTOR;
+  uint16_t stepperhighPWMToMaxSpeedFactor = STEPPER_HIGHPWM_TO_MAXSPEED_FACTOR;
+  uint16_t stepperlowPWMToAccelerationFactor = STEPPER_LOWPWM_TO_ACCELERATION_FACTOR;
+  uint16_t stepperMaxSpeed = STEPPER_HIGHPWM_TO_MAXSPEED_FACTOR * HIGH_PWM;         // setSpeedInHz (stepper-steps per second)
+  uint16_t stepperAcceleration = STEPPER_LOWPWM_TO_ACCELERATION_FACTOR * LOW_PWM;
 
 	uint8_t WASType = WAS_TYPE;                          // 0 = No ADS installed, Wheel Angle Sensor connected directly to ESP at GPIO 36 (pin set below) (attention 3,3V only)
 															                       	 // 1 = Single Mode of ADS1115 - Sensor Signal at A0 (ADS)
@@ -292,7 +310,6 @@ struct Storage {
 	uint8_t AutosteerLED_PIN = AUTOSTEER_LED_PIN;          // light on active autosteer and IBT2
 	uint8_t LEDWiFi_PIN = LED_WIFI_PIN;                    // light on WiFi connected, flashes on searching Network. If GPIO 0 is used LED must be activ LOW otherwise ESP won't boot
 	uint8_t LEDWiFi_ON_Level = LED_WIFI_ON_LEVEL;	         // HIGH = LED on high, LOW = LED on low
-
 										
 	uint8_t Relay_PIN[16] = RELAY_PINS;                    // (not supported at the moment) relais for section control
 	uint8_t Tram_PIN[3] = TRAM_PINS;                       // (not supported at the moment) relais for tramline control
@@ -310,6 +327,11 @@ struct Storage {
 	uint8_t PWM_PIN = LOCAL_PWM_PIN;                       // PWM Output to motor controller (IBT2 or cytron)
 	uint8_t DIR_PIN = LOCAL_DIR_PIN;                       // direction output to motor controller (IBT2 or cytron)
 	uint8_t Current_sens_PIN = CURRENT_SENSE_PIN;	         // (not supported at the moment) current sensor for IBT2 to read the force needed to turn steering wheel
+ 
+  uint8_t stepperDirPIN = STEPPER_DIR_PIN;
+  uint8_t stepperStepPIN = STEPPER_STEP_PULSES_PIN; 
+  uint8_t stepperEnablePIN = STEPPER_ENABLE_PIN;
+  uint8_t stepperEnableSafetyPIN = STEPPER_ENABLE_SAFETY_PIN;
 
 	uint8_t Eth_CS_PIN = ETHERNET_CS_PIN;                  // CS PIN with SPI Ethernet hardware  SPI config: MOSI 23 / MISO 19 / CLK18 / CS5
 
@@ -324,7 +346,7 @@ struct Storage {
 	float Kp = KP;                      //proportional gain  
 	float Ki = KI;                      //integral gain
 	float Kd = KD;                      //derivative gain 
-	float AOGSteerPositionZero = AOG_STEER_POSITION_ZERO;
+	uint16_t AOGSteerPositionZero = AOG_STEER_POSITION_ZERO;
 	float steerSensorCounts = STEER_SENSOR_COUNTS;
 	uint16_t roll_corr = ROLL_CORR;
 	byte minPWM = MIN_PWM, highPWM = HIGH_PWM, lowPWM = LOW_PWM;
@@ -376,6 +398,7 @@ byte steerToAOG[14] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 #include <Ethernet.h>
 #include <EthernetUdp.h>   
 #include "BNO08x_AOG.h"
+#include <FastAccelStepper.h>
 
 // Instances --------------------------------------------------------------------------------------
 ADS1115_lite adc(ADS1115_DEFAULT_ADDRESS);     // Use this for the 16-bit version ADS1115
@@ -388,6 +411,9 @@ WiFiUDP WiFiUDPToAOG;
 EthernetUDP EthUDPToAOG;
 EthernetUDP EthUDPFromAOG;
 WebServer WiFi_Server(80);
+FastAccelStepperEngine engine = FastAccelStepperEngine();
+FastAccelStepper *stepper = NULL;
+
 
 TaskHandle_t taskHandle_Eth_connect;
 TaskHandle_t taskHandle_WiFi_connect;
@@ -429,6 +455,11 @@ long steeringPosition = 0,  actualSteerPosRAW = 0; //from steering sensor steeri
 int  pulseCount = 0, prevEncAState = 0, prevEncBState = 0; // Steering Wheel Encoder
 bool encDebounce = false; // Steering Wheel Encoder
 
+//stepper variables
+int8_t _stepperActiveStatus = -1;           //-1 = init; 0 = off; 1 = just ON/Active; 2 = ON/Active
+float stepPerPositionDegree = 1.0;
+unsigned long lastStepUpdate = 0;
+
 //IMU, inclinometer variables
 int16_t roll16 = 0, heading16 = 0;
 uint16_t x_, y_, z_;
@@ -458,6 +489,8 @@ byte SectGrFromAOG[2] = { 0,0 }, Tram = 0;
 //webpage
 long argVal = 0;
 
+//check Services
+bool i2cPossible = false; bool localWASPossible = false; bool externalWASPossible = false;  bool WASPossible = false; bool stepperPossible = false; bool motorPWMPossible = false; bool outputPossible = false; bool encoderPossible = false;
 
 
 // Setup procedure -----------------------------------------------------------------------------------------------
@@ -546,10 +579,12 @@ void loop() {
 
 
 	//check, if steering wheel is moved. Debounce set to LOW in timed loop 10Hz
-	if (Set.ShaftEncoder == 1) {
-		if ((digitalRead(Set.encA_PIN) != prevEncAState) && !encDebounce) { pulseCount++; encDebounce = HIGH; }
-		if ((digitalRead(Set.encB_PIN) != prevEncBState) && !encDebounce) { pulseCount++; encDebounce = HIGH; }
-	}
+  if (encoderPossible) {
+  	if (Set.ShaftEncoder == 1) {
+  		if ((digitalRead(Set.encA_PIN) != prevEncAState) && !encDebounce) { pulseCount++; encDebounce = HIGH; }
+  		if ((digitalRead(Set.encB_PIN) != prevEncBState) && !encDebounce) { pulseCount++; encDebounce = HIGH; }
+  	}
+  }
 
 	//read steer switch
 	int tempvalue = 0;
@@ -641,9 +676,6 @@ void loop() {
 	{
 		digitalWrite(Set.AutosteerLED_PIN, HIGH);  //turn LED on (LED connected to MotorDriver = ON = Motor moves)
 		steerAngleError = steerAngleActual - steerAngleSetPoint;   //calculate the steering error 
-
-		calcSteeringPID();   //do the pid     
-		motorDrive();       //out to motors the pwm value 
 	}
 	else
 	{
@@ -655,19 +687,15 @@ void loop() {
 			//we've lost the comm to AgOpenGPS
 			if (Set.debugmode) { Serial.println("Steer-Break: watch dog timer runs out, no Data from AOG"); }
 			steerEnableOld = steerEnable;
-		}
-
-		pwmDrive = 0; //turn off steering motor
-		motorDrive(); //out to motors the pwm value   
-		pulseCount = 0; //Reset counters if Autosteer is offline  
+		} 
 	}
+  calcSteeringPIDandMoveMotor ();
 
-
-
+ 
 	//timed loop for WAS
 	// Loop triggers every 20 msec
 	now = millis();
-
+ 
 	if (now - WASLoopLastTime >= WAS_LOOP_TIME)
 	{
 		WASLoopLastTime = now;
@@ -679,29 +707,46 @@ void loop() {
 		//If connection lost to AgOpenGPS, the watchdog will count up and turn off steering
 		if (watchdogTimer++ > 250) watchdogTimer = 250;
 
-		//steering position and steer angle
-		switch (Set.WASType) {
-		case 1:  // ADS 1115 single
-			adc.setMux(ADS1115_REG_CONFIG_MUX_SINGLE_0);
-			steeringPosition = adc.getConversion();
-			adc.triggerConversion();
-			steeringPosition = steeringPosition >> 1; //divide by 2
-			break;
-		case 2:  // ADS 1115 differential
-			adc.setMux(ADS1115_REG_CONFIG_MUX_DIFF_0_1);
-			adc.triggerConversion();
-			steeringPosition = adc.getConversion();
-			steeringPosition = steeringPosition >> 1; //divide by 2
-			break;
-		default: // directly to arduino
-			steeringPosition = analogRead(Set.WAS_PIN);    vTaskDelay(1);
-			steeringPosition += analogRead(Set.WAS_PIN);
-			break;
-		}
+  	if (WASPossible) {
+  		//steering position and steer angle
+  		switch (Set.WASType) {
+  		case 1:  // ADS 1115 single
+        if (externalWASPossible){
+    			adc.setMux(ADS1115_REG_CONFIG_MUX_SINGLE_0);
+    			steeringPosition = adc.getConversion();
+    			adc.triggerConversion();
+    			steeringPosition = steeringPosition >> 1; //divide by 2
+        }
+        else {
+          steeringPosition = 0;
+        }
+  			break;
+  		case 2:  // ADS 1115 differential
+        if (externalWASPossible){
+    			adc.setMux(ADS1115_REG_CONFIG_MUX_DIFF_0_1);
+    			adc.triggerConversion();
+    			steeringPosition = adc.getConversion();
+    			steeringPosition = steeringPosition >> 1; //divide by 2
+        }
+        else {
+          steeringPosition = 0;
+        }
+  			break;
+  		default: // directly to arduino
+        if (localWASPossible){
+    			steeringPosition = analogRead(Set.WAS_PIN);    vTaskDelay(1);
+    			steeringPosition += analogRead(Set.WAS_PIN);
+        }
+        else {
+          steeringPosition = 0;
+        }
+  			break;
+  		}
+  	}
 		actualSteerPosRAW = steeringPosition; // stored for >zero< Funktion
 
 		//center the steering position sensor  
-		steeringPosition = steeringPosition - Set.WebIOSteerPosZero - Set.AOGSteerPositionZero;
+		steeringPosition = steeringPosition - Set.WebIOSteerPosZero;
 
 		//invert position, left must be minus
 		if (Set.InvertWAS == 1) steeringPosition *= -1;
@@ -715,6 +760,7 @@ void loop() {
 		steerAngleActual = ((float)(steeringPosition) / Set.steerSensorCounts);
 
 	}//WAS timed loop
+
 
 
 // data timed loop
