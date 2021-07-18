@@ -28,7 +28,7 @@
   #define WAS_TYPE 2                            // 0 = No ADS installed, Wheel Angle Sensor connected directly to ESP at GPIO 36 (pin set below) (attention 3,3V only)
                                                 // 1 = Single Mode of ADS1115 - Sensor Signal at A0 (ADS)
                                                 // 2 = Differential Mode - Connect Sensor GND to A1, Signal to A0
-  #define INVERT_WAS 0                          // set to 1 to Change Direction of Wheel Angle Sensor - to +   
+  #define INVERT_WAS 1                          // set to 1 to Change Direction of Wheel Angle Sensor - to +   
   #define ACKERMAN_FIX 78                       // if values for left and right are the same: 100                                            
   
   //SWITCHES
@@ -123,8 +123,8 @@
   #define LOCAL_WAS_DIFF_GND_PIN PIN_UNDEFINED
   
   //SWITCHES
-  #define WORK_SW_PIN 35                        // PIN for workswitch (can be analog or on/off switch see WorkSW_mode)
-  #define STEER_SW_PIN 34                       // Pin for steer button or switch (see SteerSwitchType)
+  #define WORK_SW_PIN 34                        // PIN for workswitch (can be analog or on/off switch see WorkSW_mode)
+  #define STEER_SW_PIN 35                       // Pin for steer button or switch (see SteerSwitchType)
 
   //ENCODER
   #define ENC_A_PIN PIN_UNDEFINED               // Pin for steer encoder, to turn off autosteer if steering wheel is used
