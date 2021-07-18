@@ -1,6 +1,6 @@
 #ifdef USE_CUSTOM_SETTINGS
   //general settings
-  #define EEPROM_CLEAR false                     //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again
+  #define EEPROM_CLEAR true                     //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again
 
   #define AOG_VERSION 20                        // Version number for version check 4.3.10 = 4+3+10 = 17  
   #define DATA_TRANS_VIA 7                      // transfer data via 0 = USB / 7 = WiFi UDP / 10 = Ethernet UDP
@@ -159,7 +159,7 @@
   #define KP 20.0f                              //proportional gain  
   #define KI 0.001f                             //integral gain
   #define KD 1.0f                               //derivative gain 
-  #define AOG_STEER_POSITION_ZERO 0
+  #define AOG_STEER_POSITION_ZERO 0             // keep value to 0, needed to keep WEBIO and AGIO zero function working
   #define STEER_SENSOR_COUNTS 100
   #define ROLL_CORR 200
   #define MIN_PWM 40

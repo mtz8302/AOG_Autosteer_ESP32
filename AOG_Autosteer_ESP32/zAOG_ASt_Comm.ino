@@ -234,8 +234,16 @@ void parseDataFromAOG() {
 									Set.lowPWM = (float)SentenceFromAOG[7];   // read lowPWM from AgOpenGPS
 									Set.minPWM = SentenceFromAOG[8]; //read the minimum amount of PWM for instant on
 									Set.steerSensorCounts = float(SentenceFromAOG[9]); //sent as setting displayed in AOG
-							//		Set.wasOffset = (SentenceFromAOG[10]);  //read was zero offset Hi
-							//		Set.wasOffset |= (SentenceFromAOG[11] << 8);  //read was zero offset Lo
+                  uint16_t tempWasOffset = 0;
+									tempWasOffset = (SentenceFromAOG[10]);  //read was zero offset Hi
+									tempWasOffset |= (SentenceFromAOG[11] << 8);  //read was zero offset Lo
+                  if (Set.AOGSteerPositionZero  = 0){ //on first boot after eeprom clear and first receive of SteerSetting
+                     Set.AOGSteerPositionZero = tempWasOffset;
+                  }
+                  else if (Set.AOGSteerPositionZero != tempWasOffset){ //received WASoffset was changed == WAS 0 pressed or WAS slider moved in AOG
+                    Set.WebIOSteerPosZero = actualSteerPosRAW; // >zero< Funktion Set Steer Angle to 0
+                    Set.AOGSteerPositionZero = tempWasOffset;
+                  }                 
 									Set.AckermanFix = SentenceFromAOG[12];
 
 									// for PWM High to Low interpolator
@@ -271,10 +279,21 @@ void parseDataFromAOG() {
 									Set.Kp = (float)SentenceFromAOG[4];       // read Kp from AgOpenGPS
 									Set.lowPWM = (float)SentenceFromAOG[5];     // read deadZone from AgOpenGPS
 									Set.Kd = (float)SentenceFromAOG[6] * 1.0;       // read Kd from AgOpenGPS
-									Set.Ko = (float)SentenceFromAOG[7] * 0.1;       // read Ko from AgOpenGPS
-									//Set.steeringPositionZero = (WAS_ZERO)+DataFromAOG[6];//read steering zero offset  
-									Set.AOGSteerPositionZero = float(SentenceFromAOG[8]) - 127;//read steering zero offset  
+									Set.Ko = (float)SentenceFromAOG[7] * 0.1;       // read Ko from AgOpenGPS 
 
+                  //not tested with V17 -------------------------------------------------------------------------------------------------------------
+                  //nearly same code as for higher version
+                  uint16_t tempWasOffset = 0;
+                  tempWasOffset = SentenceFromAOG[8];//read steering zero offset
+                  if (Set.AOGSteerPositionZero  = 0){ //on first boot after eeprom clear and first receive of SteerSetting
+                     Set.AOGSteerPositionZero = tempWasOffset;
+                  }
+                  else if (Set.AOGSteerPositionZero != tempWasOffset){ //received WASoffset was changed == WAS 0 pressed or WAS slider moved in AOG
+                    Set.WebIOSteerPosZero = actualSteerPosRAW; // >zero< Funktion Set Steer Angle to 0
+                    Set.AOGSteerPositionZero = tempWasOffset;
+                  } 
+                  //not tested with V17 -------------------------------------------------------------------------------------------------------------
+                  
 									Set.minPWM = SentenceFromAOG[9]; //read the minimum amount of PWM for instant on
 									Set.highPWM = SentenceFromAOG[10]; //
 

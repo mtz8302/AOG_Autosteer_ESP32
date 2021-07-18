@@ -19,7 +19,7 @@ char VersionTXT[120] = " - 16. Juli 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, 
 //
 //##########################################################################################################
 
-//to do: 230 not called in V20, steerPostionZero from AOG is ignorred, only zero button in WebIO working 
+//to do: 230 not called in V20
 
 
 // A RESET IS NEEDED AFTER SWITCHING TO OR FROM STEPPER OUTPUT during runtime (via AOG or WebIO)!
@@ -194,7 +194,7 @@ char VersionTXT[120] = " - 16. Juli 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, 
   #define KP 20.0f                              //proportional gain  
   #define KI 0.001f                             //integral gain
   #define KD 1.0f                               //derivative gain 
-  #define AOG_STEER_POSITION_ZERO 0
+  #define AOG_STEER_POSITION_ZERO 0             // keep value to 0, needed to keep WEBIO and AGIO zero function working
   #define STEER_SENSOR_COUNTS 100
   #define ROLL_CORR 200
   #define MIN_PWM 40
@@ -346,7 +346,7 @@ struct Storage {
 	float Kp = KP;                      //proportional gain  
 	float Ki = KI;                      //integral gain
 	float Kd = KD;                      //derivative gain 
-	float AOGSteerPositionZero = AOG_STEER_POSITION_ZERO;
+	uint16_t AOGSteerPositionZero = AOG_STEER_POSITION_ZERO;
 	float steerSensorCounts = STEER_SENSOR_COUNTS;
 	uint16_t roll_corr = ROLL_CORR;
 	byte minPWM = MIN_PWM, highPWM = HIGH_PWM, lowPWM = LOW_PWM;
@@ -746,7 +746,7 @@ void loop() {
 		actualSteerPosRAW = steeringPosition; // stored for >zero< Funktion
 
 		//center the steering position sensor  
-		steeringPosition = steeringPosition - Set.WebIOSteerPosZero - Set.AOGSteerPositionZero;
+		steeringPosition = steeringPosition - Set.WebIOSteerPosZero;
 
 		//invert position, left must be minus
 		if (Set.InvertWAS == 1) steeringPosition *= -1;
