@@ -82,7 +82,7 @@
   
   //WiFi
   #define WIFI_SSID "TS115_WLAN"                // WiFi network Client name
-  #define WIFI_PASSWORD "TS115_WLAN"                      // WiFi network password
+  #define WIFI_PASSWORD "TS115_WLAN"            // WiFi network password
   #define WIFI_SSID_AP "Autosteer_Unit_TS115"   // name of Access point, if no WiFi found, NO password!!
   #define WIFI_TIMEOUT_ROUTER 30                // time (seconds) to wait for WIFI access, after that own Access Point starts
   #define WIFI_TIMEOUT_TIMEOUT_WEBIO 255        // time (min) afterwards webinterface is switched off

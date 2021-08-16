@@ -410,7 +410,19 @@ void process_Request()
 			if (WiFi_Server.arg(n) == "true") { Set.debugmodeDataFromAOG = true; }
 			else { Set.debugmodeDataFromAOG = false; }
 		}
-		
+
+    if (WiFi_Server.argName(n) == "StepsPerDegreeOffset") {
+      argVal = int(WiFi_Server.arg(n).toInt());
+      if ((argVal <= 1000) && (argVal >= 0)) { Set.stepperKpToDegreesOffset = int(argVal); UpdateStepperSettings ();}
+    }
+    if (WiFi_Server.argName(n) == "highPWMToMaxSpeedFactor") {
+      argVal = int(WiFi_Server.arg(n).toInt());
+      if ((argVal <= 1000) && (argVal >= 0)) { Set.stepperhighPWMToMaxSpeedFactor = int(argVal); UpdateStepperSettings ();}
+    }    
+    if (WiFi_Server.argName(n) == "lowPWMToAccelerationFactor") {
+      argVal = int(WiFi_Server.arg(n).toInt());
+      if ((argVal <= 1000) && (argVal >= 0)) { Set.stepperlowPWMToAccelerationFactor = int(argVal); UpdateStepperSettings ();}
+    }		
 
 		if (temInt == ACTION_RESTART) {
 			Serial.println("reboot ESP32: selected by webinterface");
@@ -780,6 +792,38 @@ void make_HTML01() {
 	strcat(HTML_String, "\"></td>");
 	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
 	strcat(HTML_String, "</tr>");
+ 
+  //Stepper factors and offset
+  if (Set.output_type == 5){
+    strcat(HTML_String, "<br><br>");
+    strcat(HTML_String, "<tr>");
+    strcat(HTML_String, "<td><b>Stepper factors and offset</b></td>");
+    strcat(HTML_String, "</tr>");
+    strcat(HTML_String, "<br>");
+    strcat(HTML_String, "<tr>");
+    strcat(HTML_String, "<td>StepsPerDegreeOffset </td>");
+    strcat(HTML_String, "<td><input type = \"number\" onchange=\"sendVal('/?StepsPerDegreeOffset='+this.value)\" name = \"StepsPerDegreeOffset\" min = \"0\" max = \"1000\" step = \"1\" style= \"width:200px\" value = \"");// placeholder = \"");
+    strcati(HTML_String, Set.stepperKpToDegreesOffset);
+    strcat(HTML_String, "\"></td>");
+    strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
+    strcat(HTML_String, "</tr>");
+    strcat(HTML_String, "<br>");
+    strcat(HTML_String, "<tr>");
+    strcat(HTML_String, "<td>highPWMToMaxSpeedFactor </td>");
+    strcat(HTML_String, "<td><input type = \"number\" onchange=\"sendVal('/?highPWMToMaxSpeedFactor='+this.value)\" name = \"highPWMToMaxSpeedFactor\" min = \"0\" max = \"1000\" step = \"1\" style= \"width:200px\" value = \"");// placeholder = \"");
+    strcati(HTML_String, Set.stepperhighPWMToMaxSpeedFactor);
+    strcat(HTML_String, "\"></td>");
+    strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
+    strcat(HTML_String, "</tr>");
+    strcat(HTML_String, "<br>");
+    strcat(HTML_String, "<tr>");
+    strcat(HTML_String, "<td>lowPWMToAccelerationFactor </td>");
+    strcat(HTML_String, "<td><input type = \"number\" onchange=\"sendVal('/?lowPWMToAccelerationFactor='+this.value)\" name = \"lowPWMToAccelerationFactor\" min = \"0\" max = \"1000\" step = \"1\" style= \"width:200px\" value = \"");// placeholder = \"");
+    strcati(HTML_String, Set.stepperlowPWMToAccelerationFactor);
+    strcat(HTML_String, "\"></td>");
+    strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
+    strcat(HTML_String, "</tr>");
+  }
 
 	strcat(HTML_String, "</table>");
 	strcat(HTML_String, "</form>");
