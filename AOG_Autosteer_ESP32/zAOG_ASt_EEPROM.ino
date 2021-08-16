@@ -43,6 +43,7 @@ byte EEprom_empty_check() {
 		}
 		return 2;     // data available
 	}
+  return 0; // if nothing else fit ->return 0
 }
 //-------------------------------------------------------------------------------------------------
 
