@@ -73,19 +73,27 @@ void calcSteeringPIDandMoveMotor(void)
       else if (_stepperActiveStatus == 2){ //ON
         if (steerEnable){
           if (Set.debugmode) { Serial.print(" Stepper ON current Pos." );  Serial.print(stepper->getCurrentPosition ()); Serial.print("Stepper stepPerPositionDegree "); Serial.print(stepPerPositionDegree); }
-          if (steerAngleSetPoint != steerAngleActual){
-            if (millis() - lastStepUpdate > 200){
-              if (Set.debugmode) { Serial.print("Stepper Update Move To "); Serial.print(steerAngleSetPoint * stepPerPositionDegree); }
-              stepper->setCurrentPosition (stepPerPositionDegree * steerAngleActual);
-              stepper->moveTo (steerAngleSetPoint * stepPerPositionDegree);
-              lastStepUpdate = millis ();
-            }    
-          }
-          else {
-            if (Set.debugmode) { Serial.print("Stepper Position OK "); }
-            stepper->stopMove();
+          if (steerAngleSetPoint != steerAngleSetPointOld){
+            if (Set.debugmode) { Serial.print("Stepper Update Setpoint Move To "); Serial.print(steerAngleSetPoint * stepPerPositionDegree); }
             stepper->setCurrentPosition (stepPerPositionDegree * steerAngleActual);
-            stepper->moveTo(stepPerPositionDegree * steerAngleActual);
+            stepper->moveTo (steerAngleSetPoint * stepPerPositionDegree);
+            lastStepUpdate = millis ();
+          }
+          else{
+            if (steerAngleSetPoint != steerAngleActual){
+              if (millis() - lastStepUpdate > 200){
+                if (Set.debugmode) { Serial.print("Stepper Update Time Move To "); Serial.print(steerAngleSetPoint * stepPerPositionDegree); }
+                stepper->setCurrentPosition (stepPerPositionDegree * steerAngleActual);
+                stepper->moveTo (steerAngleSetPoint * stepPerPositionDegree);
+                lastStepUpdate = millis ();
+              }    
+            }
+            else {
+              if (Set.debugmode) { Serial.print("Stepper Position OK "); }
+              stepper->stopMove();
+              stepper->setCurrentPosition (stepPerPositionDegree * steerAngleActual);
+              stepper->moveTo(stepPerPositionDegree * steerAngleActual);
+            }         
           }
           pwmDisplay = map(stepper->getSpeedInMilliHz(),0,Set.stepperMaxSpeed,0,255);
         }

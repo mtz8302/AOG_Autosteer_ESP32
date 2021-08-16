@@ -279,7 +279,7 @@ void assignGPIOs_start_extHardware() {
   }
 
   //stepper
-  if (Set.stepperDirPIN < 255 < 255 && Set.stepperStepPIN < 255 && Set.stepperEnablePIN < 255 && Set.stepperEnableSafetyPIN < 255) {
+  if (Set.stepperDirPIN < 255 && Set.stepperStepPIN < 255 && Set.stepperEnablePIN < 255 && Set.stepperEnableSafetyPIN < 255) {
     stepperPossible = true;
     if (Set.debugmode) {
       Serial.println("stepper possible, pins are set");

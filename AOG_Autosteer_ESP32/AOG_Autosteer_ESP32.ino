@@ -55,7 +55,7 @@ char VersionTXT[120] = " - 16. Juli 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, 
   #define MOTOR_DRIVE_DIRECTION 0               // 0 = normal, 1 = inverted
   #define MOTOR_SLOW_DRIVE_DEGREES 5            // How many degrees before decreasing Max PWM
   #define PWM_OUT_FREQU 20000                   // PWM frequency for motordriver: 1000Hz:for low heat at PWM device 20000Hz: not hearable
-  #define STEPPER_KP_TO_DEGREES_FACTOR 10       // when setting Kp by WebIO or AGO the stepper-steps per degree WAS will be recalculated "stepPerPositionDegree = Kp * STEPPER_KP_TO_DEGREES_FACTOR" to make it adjustable the common and easy way
+  #define STEPPER_KP_TO_DEGREES_FACTOR  5       // when setting Kp by WebIO or AGO the stepper-steps per degree WAS will be recalculated "stepPerPositionDegree = Kp * STEPPER_KP_TO_DEGREES_FACTOR" to make it adjustable the common and easy way
   #define STEPPER_HIGHPWM_TO_MAXSPEED_FACTOR 50 // when setting highRPM by WebIO or AGO the stepper-maxSpeed will be recalculated "maxSpeed = highRPM * STEPPER_HIGHRPM_TO_MAXSPEED_FACTOR" to make it adjustable the common and easy way
   #define STEPPER_LOWPWM_TO_ACCELERATION_FACTOR 50 // when setting lowRPM by WebIO or AGO the stepper-acceleration will be recalculated "acceleration = lowRPM * STEPPER_LOWRPM_TO_ACCELERATION_FACTOR" to make it adjustable the common and easy way
 
@@ -450,7 +450,7 @@ byte guidanceStatus = 0, workSwitch = 0, workSwitchOld = 0, steerSwitch = 1, swi
 float gpsSpeed = 0, distanceFromLine = 0; 
 
 //steering variables
-float steerAngleActual = 0, steerAngleSetPoint = 0, steerAngleError = 0; //setpoint - actual
+float steerAngleActual = 0, steerAngleSetPoint = 0, steerAngleSetPointOld = 0, steerAngleError = 0; //setpoint - actual
 long steeringPosition = 0,  actualSteerPosRAW = 0; //from steering sensor steeringPosition_corr = 0,
 int  pulseCount = 0, prevEncAState = 0, prevEncBState = 0; // Steering Wheel Encoder
 bool encDebounce = false; // Steering Wheel Encoder
