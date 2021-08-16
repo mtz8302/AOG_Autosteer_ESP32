@@ -237,7 +237,7 @@ void parseDataFromAOG() {
                   uint16_t tempWasOffset = 0;
 									tempWasOffset = (SentenceFromAOG[10]);  //read was zero offset Hi
 									tempWasOffset |= (SentenceFromAOG[11] << 8);  //read was zero offset Lo
-                  if (Set.AOGSteerPositionZero  = 0){ //on first boot after eeprom clear and first receive of SteerSetting
+                  if (Set.AOGSteerPositionZero  == 0){ //on first boot after eeprom clear and first receive of SteerSetting
                      Set.AOGSteerPositionZero = tempWasOffset;
                   }
                   else if (Set.AOGSteerPositionZero != tempWasOffset){ //received WASoffset was changed == WAS 0 pressed or WAS slider moved in AOG

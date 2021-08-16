@@ -458,7 +458,7 @@ bool encDebounce = false; // Steering Wheel Encoder
 //stepper variables
 int8_t _stepperActiveStatus = -1;           //-1 = init; 0 = off; 1 = just ON/Active; 2 = ON/Active
 float stepPerPositionDegree = 1.0;
-unsigned long lastStepUpdate = 0;
+bool newWASavaliable = false;
 
 //IMU, inclinometer variables
 int16_t roll16 = 0, heading16 = 0;
@@ -742,6 +742,7 @@ void loop() {
         }
   			break;
   		}
+      newWASavaliable = true; // for stepper calculation if new value is measured
   	}
 		actualSteerPosRAW = steeringPosition; // stored for >zero< Funktion
 
