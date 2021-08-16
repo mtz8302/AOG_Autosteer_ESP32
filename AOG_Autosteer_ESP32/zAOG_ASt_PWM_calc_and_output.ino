@@ -90,7 +90,6 @@ void calcSteeringPIDandMoveMotor(void)
               //stepper->setCurrentPosition ((int)tempCalculationCurrentPosition);
               float tempCalculationTargetPosition = steerAngleSetPoint * stepPerPositionDegree;
               stepper->moveTo ((int)tempCalculationTargetPosition);
-              lastStepUpdate = millis ();
             }
             else { // still the same setpoint -> update the actual position with new WAS if possible
               if (newWASavaliable){             
