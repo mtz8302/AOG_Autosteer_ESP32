@@ -456,9 +456,11 @@ int  pulseCount = 0, prevEncAState = 0, prevEncBState = 0; // Steering Wheel Enc
 bool encDebounce = false; // Steering Wheel Encoder
 
 //stepper variables
-int8_t _stepperActiveStatus = -1;           //-1 = init; 0 = off; 1 = just ON/Active; 2 = ON/Active
+int8_t _stepperActiveStatus = -1;           //-1 = init; 0 = off; 1 = just ON; 2= wait for safetyRelayTiming; 3 = ON/Active
 float stepPerPositionDegree = 1.0;
 bool newWASavaliable = false;
+long safetyRelayActivationTime = 200; //wait ms to close contact of relay
+unsigned long lastSafetyRelayActivationTime = 0;
 
 //IMU, inclinometer variables
 int16_t roll16 = 0, heading16 = 0;
