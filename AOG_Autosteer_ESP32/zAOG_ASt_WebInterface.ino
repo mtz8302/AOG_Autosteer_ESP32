@@ -1193,8 +1193,8 @@ void make_HTML01() {
     strcat(HTML_String, "<b>Stepper Values:</b> <br>");
     strcat(HTML_String, "Kp: ");
     strcati(HTML_String, Set.Kp);
-    strcat(HTML_String, ", stepperKpToDegreesFactor: ");
-    strcati(HTML_String, Set.stepperKpToDegreesFactor);   
+    strcat(HTML_String, ", stepperKpToDegreesOffset: ");
+    strcati(HTML_String, Set.stepperKpToDegreesOffset);   
     strcat(HTML_String, ", stepPerPositionDegree: ");
     strcati(HTML_String, stepPerPositionDegree);
     strcat(HTML_String, "<br>");

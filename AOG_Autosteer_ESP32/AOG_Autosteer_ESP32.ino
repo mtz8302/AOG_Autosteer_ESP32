@@ -55,7 +55,7 @@ char VersionTXT[120] = " - 16. Juli 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, 
   #define MOTOR_DRIVE_DIRECTION 0               // 0 = normal, 1 = inverted
   #define MOTOR_SLOW_DRIVE_DEGREES 5            // How many degrees before decreasing Max PWM
   #define PWM_OUT_FREQU 20000                   // PWM frequency for motordriver: 1000Hz:for low heat at PWM device 20000Hz: not hearable
-  #define STEPPER_KP_TO_DEGREES_FACTOR  5       // when setting Kp by WebIO or AGO the stepper-steps per degree WAS will be recalculated "stepPerPositionDegree = Kp * STEPPER_KP_TO_DEGREES_FACTOR" to make it adjustable the common and easy way
+  #define STEPPER_KP_TO_DEGREES_OFFSET  0       // when setting Kp by WebIO or AGO the stepper-steps per degree WAS will be recalculated "stepPerPositionDegree = Kp + STEPPER_KP_TO_DEGREES_OFFSET" to make it adjustable the common and easy way
   #define STEPPER_HIGHPWM_TO_MAXSPEED_FACTOR 50 // when setting highRPM by WebIO or AGO the stepper-maxSpeed will be recalculated "maxSpeed = highRPM * STEPPER_HIGHRPM_TO_MAXSPEED_FACTOR" to make it adjustable the common and easy way
   #define STEPPER_LOWPWM_TO_ACCELERATION_FACTOR 50 // when setting lowRPM by WebIO or AGO the stepper-acceleration will be recalculated "acceleration = lowRPM * STEPPER_LOWRPM_TO_ACCELERATION_FACTOR" to make it adjustable the common and easy way
 
@@ -246,7 +246,7 @@ struct Storage {
 
 	uint8_t MotorSlowDriveDegrees = MOTOR_SLOW_DRIVE_DEGREES;	// How many degrees before decreasing Max PWM 
 
-  uint16_t stepperKpToDegreesFactor = STEPPER_KP_TO_DEGREES_FACTOR;
+  uint16_t stepperKpToDegreesOffset = STEPPER_KP_TO_DEGREES_OFFSET;
   uint16_t stepperhighPWMToMaxSpeedFactor = STEPPER_HIGHPWM_TO_MAXSPEED_FACTOR;
   uint16_t stepperlowPWMToAccelerationFactor = STEPPER_LOWPWM_TO_ACCELERATION_FACTOR;
   uint16_t stepperMaxSpeed = STEPPER_HIGHPWM_TO_MAXSPEED_FACTOR * HIGH_PWM;         // setSpeedInHz (stepper-steps per second)
