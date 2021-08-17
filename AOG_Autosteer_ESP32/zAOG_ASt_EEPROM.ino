@@ -12,7 +12,7 @@ byte EE_ident2 = vers_nr;
 void restoreEEprom() {
 	Serial.println("read values from EEPROM");
 	byte ECheck = EEprom_empty_check();
-	if (ECheck == 1 || EEPROM_clear) { //first start?
+	if (ECheck == 1 || Set.EEPROM_clear) { //first start?
 		EEprom_write_all();     //write default data
 		Serial.println("EEPROM write all");
 	}
@@ -50,7 +50,7 @@ byte EEprom_empty_check() {
 void EEprom_write_all() {
 	int leng = sizeof(Set);
 	byte tempbyt = EEprom_empty_check();
-	if ((tempbyt == 0) || (tempbyt == 1) || (EEPROM_clear)) {
+	if ((tempbyt == 0) || (tempbyt == 1) || (Set.EEPROM_clear)) {
 		//EEPROM.put((4 + sizeof(Set)), Set); 
 		Serial.print("rewriting EEPROM + write 2. set at #"); Serial.println(4 + leng);
 		//write 2. time with defaults to be able to reload them  
@@ -73,6 +73,17 @@ void EEprom_write_all() {
 	delay(50);
 	EEPROM.commit();
 	delay(50);
+}
+//-------------------------------------------------------------------------------------------------
+void EEprom_write_TempSet() {
+  int leng = sizeof(TempSet);
+  for (int n = 0; n < leng; n++) {
+    EEPROM.write(n + 3, ((unsigned char*)(&TempSet))[n]);
+    delay(2);
+  }
+  delay(50);
+  EEPROM.commit();
+  delay(50);
 }
 //--------------------------------------------------------------
 void EEprom_read_all() {

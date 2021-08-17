@@ -198,13 +198,13 @@ void assignGPIOs_start_extHardware() {
   //if (Set.WASType > 0 && Set.WASType < 3)  Set.WebIOSteerPosZero = 13000;  //with ADS start with 13000 
 
 	
-#if USE_LED_BUILTIN
-	pinMode(LED_BUILTIN, OUTPUT);
-  if (Set.debugmode) {
-      Serial.print("LED_BUILTIN as OUTPUT is set to ");
-      Serial.println(LED_BUILTIN);
+  if (Set.use_LED_builtin){
+  	pinMode(LED_BUILTIN, OUTPUT);
+    if (Set.debugmode) {
+        Serial.print("LED_BUILTIN as OUTPUT is set to ");
+        Serial.println(LED_BUILTIN);
+    }
   }
-#endif	
 
 	if (Set.LEDWiFi_PIN < 255) { 
 	  pinMode(Set.LEDWiFi_PIN, OUTPUT); 

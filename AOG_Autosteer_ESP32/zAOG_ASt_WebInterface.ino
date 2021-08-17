@@ -145,6 +145,14 @@ void process_Request()
 			if (Set.debugmode) { Serial.println("Save button pressed in webinterface"); }
 			EEprom_write_all();
 		}
+    if (WiFi_Server.argName(n) == "SaveTempToEEPROM") {
+      if (Set.debugmode) { Serial.println("SaveTempToEEPROM button pressed in webinterface"); }
+      EEprom_write_TempSet();
+    }
+    if (WiFi_Server.argName(n) == "CopySettingsToTemp") {
+      if (Set.debugmode) { Serial.println("CopySettingsToTemp button pressed in webinterface"); }
+      TempSet = Set;
+    }
 
 		if (WiFi_Server.argName(n) == "SSID_MY1") {
 			for (int i = 0; i < 24; i++) Set.ssid1[i] = 0x00;
@@ -402,6 +410,100 @@ void process_Request()
 			temInt = WiFi_Server.arg(n).toInt();
 			Set.Eth_mac[5] = byte(temInt);
 		}
+
+    if (WiFi_Server.argName(n) == "SDA") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.SDA = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "SCL") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.SCL = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "AutosteerLED_PIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.AutosteerLED_PIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "LEDWiFi_PIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.LEDWiFi_PIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "LEDWiFi_ON_Level") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 1) && (argVal >= 0)) { TempSet.LEDWiFi_ON_Level = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "LOCAL_WAS_PIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.WAS_PIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "WAS_Diff_GND_PIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.WAS_Diff_GND_PIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "WORKSW_PIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.WORKSW_PIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "STEERSW_PIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.STEERSW_PIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "encA_PIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.encA_PIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "encB_PIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.encB_PIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "Servo_PIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.Servo_PIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "PWM_PIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.PWM_PIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "DIR_PIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.DIR_PIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "Current_sens_PIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.Current_sens_PIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "stepperDirPIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.stepperDirPIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "stepperStepPIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.stepperStepPIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "stepperEnablePIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.stepperEnablePIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "stepperEnableSafetyPIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.stepperEnableSafetyPIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "Eth_CS_PIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.Eth_CS_PIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "CAN_RX_PIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.CAN_RX_PIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "CAN_TX_PIN") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 255) && (argVal >= 0)) { TempSet.CAN_TX_PIN = byte(temInt);}
+    }
+    if (WiFi_Server.argName(n) == "use_LED_builtin") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 1) && (argVal >= 0)) { TempSet.use_LED_builtin = byte(temInt);}
+    }
+    
 		if (WiFi_Server.argName(n) == "debugmode") {
 			if (WiFi_Server.arg(n) == "true") { Set.debugmode = true; }
 			else { Set.debugmode = false; }
@@ -410,6 +512,10 @@ void process_Request()
 			if (WiFi_Server.arg(n) == "true") { Set.debugmodeDataFromAOG = true; }
 			else { Set.debugmodeDataFromAOG = false; }
 		}
+    if (WiFi_Server.argName(n) == "EEPROM_clear") {
+      if (WiFi_Server.arg(n) == "true") { Set.EEPROM_clear = true; }
+      else { Set.EEPROM_clear = false; }
+    }
 
     if (WiFi_Server.argName(n) == "StepsPerDegreeOffset") {
       argVal = int(WiFi_Server.arg(n).toInt());
@@ -472,21 +578,42 @@ void make_HTML01() {
 	strcat(HTML_String, "<br><hr>");
 
 	//---------------------------------------------------------------------------------------------  
-	//load values of INO setup zone
-	strcat(HTML_String, "<h2>Load default values of INO setup zone</h2>");
+	//EEPROM
+	strcat(HTML_String, "<h2>EEPROM</h2>");
 	strcat(HTML_String, "<form>");
 	strcat(HTML_String, "<table>");
 	set_colgroup(270, 250, 150, 0, 0);
 
-	strcat(HTML_String, "<tr>");
-	strcat(HTML_String, "<td colspan=\"2\">Only loads default values, does NOT save them</td>");
-	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?ACTION=");
-	strcati(HTML_String, ACTION_LoadDefaultVal);
-	strcat(HTML_String, "')\" style= \"width:150px\" value=\"Load default values\"></button></td>");
-	strcat(HTML_String, "</tr>");
+  strcat(HTML_String, "<tr><td>If it is selected, the settings in EEPROM will be reseted to compiled/default values after each reboot.<br>Uncheck this box after the first boot and press safe to keep modified settings during further reboots.</td><br>");
+  strcat(HTML_String, "<td><input type=\"checkbox\" onclick=\"sendVal('/?EEPROM_clear='+this.checked)\" name=\"EEPROM_clear\" id = \"Part\" value = \"1\" ");
+  if (Set.EEPROM_clear == 1) strcat(HTML_String, "checked ");
+  strcat(HTML_String, "> ");
+  strcat(HTML_String, "<label for =\"Part\"> <b> EEPROM_clear</b></label>");
+  strcat(HTML_String, "</td>");
+  strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
+  strcat(HTML_String, "</tr>");
+  strcat(HTML_String, "</tr>");
+  
 	strcat(HTML_String, "</table>");
 	strcat(HTML_String, "</form>");
 	strcat(HTML_String, "<br><hr>");
+
+  //---------------------------------------------------------------------------------------------  
+  //load values of INO setup zone
+  strcat(HTML_String, "<h2>Load default values of INO setup zone</h2>");
+  strcat(HTML_String, "<form>");
+  strcat(HTML_String, "<table>");
+  set_colgroup(270, 250, 150, 0, 0);
+
+  strcat(HTML_String, "<tr>");
+  strcat(HTML_String, "<td colspan=\"2\">Only loads default values, does NOT save them</td>");
+  strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?ACTION=");
+  strcati(HTML_String, ACTION_LoadDefaultVal);
+  strcat(HTML_String, "')\" style= \"width:150px\" value=\"Load default values\"></button></td>");
+  strcat(HTML_String, "</tr>"); 
+  strcat(HTML_String, "</table>");
+  strcat(HTML_String, "</form>");
+  strcat(HTML_String, "<br><hr>");
 
 	//-----------------------------------------------------------------------------------------
 	// WiFi Client Access Data
@@ -1214,9 +1341,110 @@ void make_HTML01() {
 	strcat(HTML_String, "<br><hr>");
 
 
-	//-------------------------------------------------------------
+  //-------------------------------------------------------------
+  // Pins
+  strcat(HTML_String, "<h2>PINs+</h2><br>");
+
+  //values
+  strcat(HTML_String, "<b>You have to strictly follow the procedure to adjust the PINs during runtime (with this Web interface) to avoid further problems:</b> <br>");
+  strcat(HTML_String, "<b>#1</b> Do NOT change other then the PINs settings on this Webpage until you have completed the full procedure. <br>");
+  
+  strcat(HTML_String, "<tr><td><b>#2</b> Import the current active settings into a temp. storage by pressing this button </td> ");
+  strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?CopySettingsToTemp=true')\" style= \"width:250px\" value=\"Store actual settings to temp\"></button></td>");
+  strcat(HTML_String, "</tr><br>");
+  
+  strcat(HTML_String, "<tr><td><b>#3</b> Reload this Web page in your browser to display the current temp. settings follwoing below.</td><br>");
+  strcat(HTML_String, "</tr>");
+
+  strcat(HTML_String, "<tr><td><b>#4</b> Adjust the pins+ (255 == not defined):</td><br>");
+
+  strcat(HTML_String, "<td>SDA <input type = \"number\"  onchange=\"sendVal('/?SDA='+this.value)\" name = \"SDA\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.SDA);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>SCL <input type = \"number\"  onchange=\"sendVal('/?SCL='+this.value)\" name = \"SCL\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.SCL);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>AutosteerLED_PIN <input type = \"number\"  onchange=\"sendVal('/?AutosteerLED_PIN='+this.value)\" name = \"AutosteerLED_PIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.AutosteerLED_PIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>LEDWiFi_PIN <input type = \"number\"  onchange=\"sendVal('/?LEDWiFi_PIN='+this.value)\" name = \"LEDWiFi_PIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.LEDWiFi_PIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>LEDWiFi_ON_Level (0 LOW, 1 HIGH) <input type = \"number\"  onchange=\"sendVal('/?LEDWiFi_ON_Level='+this.value)\" name = \"LEDWiFi_ON_Level\" min = \"0\" max = \"1\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.LEDWiFi_ON_Level);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>use_LED_builtin (0 NotInUse, 1 InUse) <input type = \"number\"  onchange=\"sendVal('/?use_LED_builtin='+this.value)\" name = \"use_LED_builtin\" min = \"0\" max = \"1\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.use_LED_builtin);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>LOCAL_WAS_PIN <input type = \"number\"  onchange=\"sendVal('/?LOCAL_WAS_PIN='+this.value)\" name = \"LOCAL_WAS_PIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.WAS_PIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>WAS_Diff_GND_PIN <input type = \"number\"  onchange=\"sendVal('/?WAS_Diff_GND_PIN='+this.value)\" name = \"WAS_Diff_GND_PIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.WAS_Diff_GND_PIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>WORKSW_PIN <input type = \"number\"  onchange=\"sendVal('/?WORKSW_PIN='+this.value)\" name = \"WORKSW_PIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.WORKSW_PIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>STEERSW_PIN <input type = \"number\"  onchange=\"sendVal('/?STEERSW_PIN='+this.value)\" name = \"STEERSW_PIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.STEERSW_PIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>encA_PIN <input type = \"number\"  onchange=\"sendVal('/?encA_PIN='+this.value)\" name = \"encA_PIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.encA_PIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>encB_PIN <input type = \"number\"  onchange=\"sendVal('/?encB_PIN='+this.value)\" name = \"encB_PIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.encB_PIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>Servo_PIN <input type = \"number\"  onchange=\"sendVal('/?Servo_PIN='+this.value)\" name = \"Servo_PIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.Servo_PIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>PWM_PIN <input type = \"number\"  onchange=\"sendVal('/?PWM_PIN='+this.value)\" name = \"PWM_PIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.PWM_PIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>DIR_PIN <input type = \"number\"  onchange=\"sendVal('/?DIR_PIN='+this.value)\" name = \"DIR_PIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.DIR_PIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>Current_sens_PIN <input type = \"number\"  onchange=\"sendVal('/?Current_sens_PIN='+this.value)\" name = \"Current_sens_PIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.Current_sens_PIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>stepperDirPIN <input type = \"number\"  onchange=\"sendVal('/?stepperDirPIN='+this.value)\" name = \"stepperDirPIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.stepperDirPIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>stepperStepPIN <input type = \"number\"  onchange=\"sendVal('/?stepperStepPIN='+this.value)\" name = \"stepperStepPIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.stepperStepPIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>stepperEnablePIN <input type = \"number\"  onchange=\"sendVal('/?stepperEnablePIN='+this.value)\" name = \"stepperEnablePIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.stepperEnablePIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>stepperEnableSafetyPIN <input type = \"number\"  onchange=\"sendVal('/?stepperEnableSafetyPIN='+this.value)\" name = \"stepperEnableSafetyPIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.stepperEnableSafetyPIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>Eth_CS_PIN <input type = \"number\"  onchange=\"sendVal('/?Eth_CS_PIN='+this.value)\" name = \"Eth_CS_PIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.Eth_CS_PIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>CAN_RX_PIN <input type = \"number\"  onchange=\"sendVal('/?CAN_RX_PIN='+this.value)\" name = \"CAN_RX_PIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.CAN_RX_PIN);
+  strcat(HTML_String, "\"></td><br>");
+  strcat(HTML_String, "<td>CAN_TX_PIN <input type = \"number\"  onchange=\"sendVal('/?CAN_TX_PIN='+this.value)\" name = \"CAN_TX_PIN\" min = \"0\" max = \"255\" step = \"1\" style= \"width:40px\" value = \"");
+  strcati(HTML_String, TempSet.CAN_TX_PIN);
+  strcat(HTML_String, "\"></td>");
+  strcat(HTML_String, "<br></tr>");
+
+  strcat(HTML_String, "<tr><td><b>#5</b> Store the temp. settings to permanent storage (EEPROM) to be reloades after reboot by pressing this button. </td> ");
+  strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?SaveTempToEEPROM=true')\" style= \"width:250px\" value=\"Save temp settings to EEPROM\"></button></td><br>");
+  strcat(HTML_String, "<td>(The default/compiled values will not be changed and can be restored with the button on top of this page.)</td>");
+  strcat(HTML_String, "</tr><br>");
+
+  strcat(HTML_String, "<tr><td><b>#6</b> To use the now saved values please reboot the AutosteerUnit. If not rebooted automaticly use this button, the hardware button on the ESP32 or recycle the powersupply.</td> ");
+  strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?ACTION=");
+  strcati(HTML_String, ACTION_RESTART);
+  strcat(HTML_String, "')\" style= \"width:120px\" value=\"Restart\"></button></td>");
+  strcat(HTML_String, "</tr><br>");
+
+  strcat(HTML_String, "<br><hr>");
+  
+  //-------------------------------------------------------------
 	// Checkbox debugmode
-	strcat(HTML_String, "<h2>Debug</h2><hr>");
+	strcat(HTML_String, "<h2>Debug</h2><br>");
 
 	//debug values
 	strcat(HTML_String, "<b>Settingsdata from AOG:</b> <br>Ackermann: ");
@@ -1308,7 +1536,7 @@ void make_HTML01() {
   strcati(HTML_String, Set.AutosteerLED_PIN);
   strcat(HTML_String, ", LEDWiFi_PIN: ");
   strcati(HTML_String, Set.LEDWiFi_PIN);
-  strcat(HTML_String, "<br><hr>");
+  strcat(HTML_String, "<br><br>");
 
 	strcat(HTML_String, "<form>");
 	strcat(HTML_String, "<table>");

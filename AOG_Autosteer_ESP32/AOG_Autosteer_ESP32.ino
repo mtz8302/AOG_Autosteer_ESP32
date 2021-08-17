@@ -7,8 +7,8 @@
 // StepperDriver included additions by hagre with use of "FastAccelStepper" library made by gin66 found on https://github.com/gin66/FastAccelStepper
 // Version 0.23.2 is not included PLEASE INSTALL/DOWNLOAD with Librarymanager of the ARDUINO IDE
 
-byte vers_nr = 47;
-char VersionTXT[120] = " - 16. Aug. 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, CMPS/BNO085 and Ethernet, configFile, +StepperDriver)";
+byte vers_nr = 48;
+char VersionTXT[120] = " - 17. Aug. 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, CMPS/BNO085 and Ethernet, configFile+WEB, +StepperDriver)";
 
 //##########################################################################################################
 //### Setup Zone ###########################################################################################
@@ -201,6 +201,11 @@ char VersionTXT[120] = " - 16. Aug. 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, 
   #define HIGH_PWM 150
   #define LOW_PWM 60
 #endif
+
+//if not defined in Arduino.h
+#ifndef LED_BUILTIN
+  #define LED_BUILTIN 255
+#endif 
  
 //##########################################################################################################################
 // Do NOT change values below
@@ -354,9 +359,11 @@ struct Storage {
 	bool debugmode = DEBUG_MODE;
 	bool debugmodeDataFromAOG = DEBUG_MODE_DATA_FROM_AOG;
 
+  boolean EEPROM_clear = EEPROM_CLEAR;  //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again (or deselect on WebConfigPage after flash and boot of new firmware)
+  boolean use_LED_builtin = USE_LED_BUILTIN;
+  
 };  Storage Set;
-
-boolean EEPROM_clear = EEPROM_CLEAR;  //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again
+Storage TempSet; //to config all Pins in Web-interface and "import" all changes in one write and reboot action to avoid reeboots and misconfigs during Web-based adjustment
 
 //Sentence up to V4.3 -----------------------------------------------------------------------------	
 //steer PGN numbers are the same in V4.3
