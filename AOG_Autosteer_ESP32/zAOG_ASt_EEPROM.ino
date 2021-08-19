@@ -11,6 +11,7 @@ void restoreEEprom() {
 	Serial.println("read values from EEPROM");
 	byte ECheck = EEprom_empty_check();
 	if (ECheck == 3) { //first start?, breaking version up or downgrade
+    EEpromClear ();
     EEprom_write_versionAndIdent();
 		EEprom_write_FirstSet();  //write normal and default data
     EEprom_write_SecondSet();
@@ -24,11 +25,23 @@ void restoreEEprom() {
   else if (ECheck == 1) { //data available - ident version
     EEprom_read_all();
     Serial.println("Ident version - EEPROM read all");
+    Serial.println(Set.debugmode);
   }
   else {
     Serial.println("ERROR with EEPROM !");
   }
 	if (Set.debugmode) { EEprom_show_memory(); }
+}
+//--------------------------------------------------------------
+void EEpromClear (){
+  Serial.println("DELEFE (FF) all EEPROM !");
+  for (int n = 0; n < EEPROM_SIZE; n++) {
+    EEPROM.write(n , 255);
+    delay(2);
+  }
+  delay(50);
+  EEPROM.commit();
+  delay(50);
 }
 //--------------------------------------------------------------
 int VersionCompare (int oldNr, int newNr, int NoChangeSinceNr){
@@ -104,13 +117,13 @@ void EEprom_write_versionAndIdent() {
 //-------------------------------------------------------------------------------------------------
 void EEprom_write_FirstSet() {
   int leng = sizeof(Set);
-  if (2*leng+4 > EEPROM_SIZE){
+  if (2*leng+START_OF_FRIST_SET+1 > EEPROM_SIZE){
     Serial.println("Settings are to long for EEPROM !");
     leng = (EEPROM_SIZE - START_OF_FRIST_SET) / 2;  // to prevent further damage to data
   }
   Serial.print("rewriting EEPROM + write 1. set at #");Serial.println(START_OF_FRIST_SET);
   for (int n = 0; n < leng; n++) {
-    EEPROM.write(n + START_OF_FRIST_SET, ((unsigned char*)(&TempSet))[n]);
+    EEPROM.write(n + START_OF_FRIST_SET, ((unsigned char*)(&Set))[n]);
     delay(2);
   }
   delay(50);
@@ -120,14 +133,14 @@ void EEprom_write_FirstSet() {
 //-------------------------------------------------------------------------------------------------
 void EEprom_write_SecondSet() {
   int leng = sizeof(Set);
-  uint16_t startOfSecondSet = ((EEPROM_SIZE - START_OF_FRIST_SET) / 2) +1 +START_OF_FRIST_SET;
+  uint16_t startOfSecondSet = ((EEPROM_SIZE - START_OF_FRIST_SET) / 2) +START_OF_FRIST_SET;
   if (2*leng+4 > EEPROM_SIZE){
     Serial.println("Settings are to long for EEPROM !");
     leng = (EEPROM_SIZE - START_OF_FRIST_SET) / 2;  // to prevent further damage to data
   }
   Serial.print("rewriting EEPROM + write 2. set at #");Serial.println(startOfSecondSet);
   for (int n = 0; n < leng; n++) {
-    EEPROM.write(n + startOfSecondSet, ((unsigned char*)(&TempSet))[n]);
+    EEPROM.write(n + startOfSecondSet, ((unsigned char*)(&Set))[n]);
     delay(2);
   }
   delay(50);
@@ -157,33 +170,12 @@ void EEprom_read_all() {
 //--------------------------------------------------------------
 void EEprom_read_default() {
 	int leng = sizeof(Set);
-  uint16_t startOfSecondSet = ((EEPROM_SIZE - START_OF_FRIST_SET) / 2) +1 +START_OF_FRIST_SET;
+  uint16_t startOfSecondSet = ((EEPROM_SIZE - START_OF_FRIST_SET) / 2) +START_OF_FRIST_SET;
 	for (int n = 0; n < leng; n++) {
 		((unsigned char*)(&Set))[n] = EEPROM.read(n + startOfSecondSet);
 	}
-	Serial.print("load default value from EEPROM at #"); Serial.println(4 + sizeof(Set));
+	Serial.print("load default value from EEPROM at #"); Serial.println(startOfSecondSet);
 }
-
-//--------------------------------------------------------------
-void EEprom_block_restart() {
-	if (EEPROM.read(2) == 0) {//prevents from restarting, when webpage is reloaded. Is set to 0, when other ACTION than restart is called
-		EEPROM.write(2, 1);
-		delay(2);
-		EEPROM.commit();
-		delay(50);
-	}
-}
-
-//--------------------------------------------------------------
-void EEprom_unblock_restart() {
-	if (EEPROM.read(2) != 0) {
-		EEPROM.write(2, 0); // reset Restart blocker
-		delay(2);
-		EEPROM.commit();
-		delay(50);
-	}
-}
-
 //--------------------------------------------------------------
 void EEprom_show_memory() {
 	byte c2 = 0, data_;

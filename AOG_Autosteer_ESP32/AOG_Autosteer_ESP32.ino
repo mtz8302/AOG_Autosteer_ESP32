@@ -7,16 +7,16 @@
 // StepperDriver included additions by hagre with use of "FastAccelStepper" library made by gin66 found on https://github.com/gin66/FastAccelStepper
 // Version 0.23.2 is not included PLEASE INSTALL/DOWNLOAD with Librarymanager of the ARDUINO IDE
 
-byte major_ver_nr = 1;  //nr. 2 will be e.g for complete rewrite to RTOS
+byte major_ver_nr = 2;  //nr. 2 will be e.g for complete rewrite to RTOS
 byte minor_ver_nr = 0;  //increase with each feture or significant update
-byte patch_level_ver_nr = 1; //increase during bug fixing and development until minor-version step
-char VersionTXT[120] = "18. Aug. 2021 by MTZ8302 + hagre";
+byte patch_level_ver_nr = 4; //increase during bug fixing and development until minor-version step
+char VersionTXT[120] = "19. Aug. 2021 by MTZ8302 + hagre";
 char FearureTXT[120] = "(V4.3+V5 ready, CMPS/BNO085, Ethernet, config by File+WEB, StepperDriver)";
 
 //NO EEPROM/SETTINGS-STRUCTUREe CHANGE SINCE VERSION (will not rewrite EEPROM if still in range)
-byte noChangeSince_major_ver_nr = 1;  
+byte noChangeSince_major_ver_nr = 2;  
 byte noChangeSince_minor_ver_nr = 0;  
-byte noChangeSince_patch_level_ver_nr = 0;
+byte noChangeSince_patch_level_ver_nr = 4;
 
 //##########################################################################################################
 //### Setup Zone ###########################################################################################
@@ -28,14 +28,13 @@ byte noChangeSince_patch_level_ver_nr = 0;
 //##########################################################################################################
 
 //to do: 230 not called in V20
-
-
 // A RESET IS NEEDED AFTER SWITCHING TO OR FROM STEPPER OUTPUT during runtime (via AOG or WebIO)!
 
 //##########################################################################################################
 //If you want to use your personal Settings including the PINs definition for compiling (for custom Bord designs,...) uncomment the following
 #define USE_CUSTOM_SETTINGS
 //##########################################################################################################
+
 #define PIN_UNDEFINED 255
 
 #ifdef USE_CUSTOM_SETTINGS
