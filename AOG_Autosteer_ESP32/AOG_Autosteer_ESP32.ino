@@ -7,8 +7,16 @@
 // StepperDriver included additions by hagre with use of "FastAccelStepper" library made by gin66 found on https://github.com/gin66/FastAccelStepper
 // Version 0.23.2 is not included PLEASE INSTALL/DOWNLOAD with Librarymanager of the ARDUINO IDE
 
-byte vers_nr = 46;
-char VersionTXT[120] = " - 16. Juli 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, CMPS/BNO085 and Ethernet, configFile, +StepperDriver)";
+byte major_ver_nr = 2;  //nr. 2 will be e.g for complete rewrite to RTOS
+byte minor_ver_nr = 0;  //increase with each feture or significant update
+byte patch_level_ver_nr = 4; //increase during bug fixing and development until minor-version step
+char VersionTXT[120] = "19. Aug. 2021 by MTZ8302 + hagre";
+char FearureTXT[120] = "(V4.3+V5 ready, CMPS/BNO085, Ethernet, config by File+WEB, StepperDriver)";
+
+//NO EEPROM/SETTINGS-STRUCTUREe CHANGE SINCE VERSION (will not rewrite EEPROM if still in range)
+byte noChangeSince_major_ver_nr = 2;  
+byte noChangeSince_minor_ver_nr = 0;  
+byte noChangeSince_patch_level_ver_nr = 4;
 
 //##########################################################################################################
 //### Setup Zone ###########################################################################################
@@ -20,14 +28,13 @@ char VersionTXT[120] = " - 16. Juli 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, 
 //##########################################################################################################
 
 //to do: 230 not called in V20
-
-
 // A RESET IS NEEDED AFTER SWITCHING TO OR FROM STEPPER OUTPUT during runtime (via AOG or WebIO)!
 
 //##########################################################################################################
 //If you want to use your personal Settings including the PINs definition for compiling (for custom Bord designs,...) uncomment the following
 #define USE_CUSTOM_SETTINGS
 //##########################################################################################################
+
 #define PIN_UNDEFINED 255
 
 #ifdef USE_CUSTOM_SETTINGS
@@ -35,8 +42,6 @@ char VersionTXT[120] = " - 16. Juli 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, 
 #else
 // Default Values/Settings by MTZ8302
 //general settings
-  #define EEPROM_CLEAR false                    //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again
-
   #define AOG_VERSION 20                        // Version number for version check 4.3.10 = 4+3+10 = 17  
   #define DATA_TRANS_VIA 7                      // transfer data via 0 = USB / 7 = WiFi UDP / 10 = Ethernet UDP
 
@@ -55,7 +60,7 @@ char VersionTXT[120] = " - 16. Juli 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, 
   #define MOTOR_DRIVE_DIRECTION 0               // 0 = normal, 1 = inverted
   #define MOTOR_SLOW_DRIVE_DEGREES 5            // How many degrees before decreasing Max PWM
   #define PWM_OUT_FREQU 20000                   // PWM frequency for motordriver: 1000Hz:for low heat at PWM device 20000Hz: not hearable
-  #define STEPPER_KP_TO_DEGREES_FACTOR 10       // when setting Kp by WebIO or AGO the stepper-steps per degree WAS will be recalculated "stepPerPositionDegree = Kp * STEPPER_KP_TO_DEGREES_FACTOR" to make it adjustable the common and easy way
+  #define STEPPER_KP_TO_DEGREES_OFFSET  0       // when setting Kp by WebIO or AGO the stepper-steps per degree WAS will be recalculated "stepPerPositionDegree = Kp + STEPPER_KP_TO_DEGREES_OFFSET" to make it adjustable the common and easy way
   #define STEPPER_HIGHPWM_TO_MAXSPEED_FACTOR 50 // when setting highRPM by WebIO or AGO the stepper-maxSpeed will be recalculated "maxSpeed = highRPM * STEPPER_HIGHRPM_TO_MAXSPEED_FACTOR" to make it adjustable the common and easy way
   #define STEPPER_LOWPWM_TO_ACCELERATION_FACTOR 50 // when setting lowRPM by WebIO or AGO the stepper-acceleration will be recalculated "acceleration = lowRPM * STEPPER_LOWRPM_TO_ACCELERATION_FACTOR" to make it adjustable the common and easy way
 
@@ -201,6 +206,11 @@ char VersionTXT[120] = " - 16. Juli 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, 
   #define HIGH_PWM 150
   #define LOW_PWM 60
 #endif
+
+//if not defined in Arduino.h
+#ifndef LED_BUILTIN
+  #define LED_BUILTIN 255
+#endif 
  
 //##########################################################################################################################
 // Do NOT change values below
@@ -246,7 +256,7 @@ struct Storage {
 
 	uint8_t MotorSlowDriveDegrees = MOTOR_SLOW_DRIVE_DEGREES;	// How many degrees before decreasing Max PWM 
 
-  uint16_t stepperKpToDegreesFactor = STEPPER_KP_TO_DEGREES_FACTOR;
+  uint16_t stepperKpToDegreesOffset = STEPPER_KP_TO_DEGREES_OFFSET;
   uint16_t stepperhighPWMToMaxSpeedFactor = STEPPER_HIGHPWM_TO_MAXSPEED_FACTOR;
   uint16_t stepperlowPWMToAccelerationFactor = STEPPER_LOWPWM_TO_ACCELERATION_FACTOR;
   uint16_t stepperMaxSpeed = STEPPER_HIGHPWM_TO_MAXSPEED_FACTOR * HIGH_PWM;         // setSpeedInHz (stepper-steps per second)
@@ -354,9 +364,10 @@ struct Storage {
 	bool debugmode = DEBUG_MODE;
 	bool debugmodeDataFromAOG = DEBUG_MODE_DATA_FROM_AOG;
 
+  boolean use_LED_builtin = USE_LED_BUILTIN;
+  
 };  Storage Set;
-
-boolean EEPROM_clear = EEPROM_CLEAR;  //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again
+Storage TempSet; //to config all Pins in Web-interface and "import" all changes in one write and reboot action to avoid reeboots and misconfigs during Web-based adjustment
 
 //Sentence up to V4.3 -----------------------------------------------------------------------------	
 //steer PGN numbers are the same in V4.3
@@ -450,15 +461,17 @@ byte guidanceStatus = 0, workSwitch = 0, workSwitchOld = 0, steerSwitch = 1, swi
 float gpsSpeed = 0, distanceFromLine = 0; 
 
 //steering variables
-float steerAngleActual = 0, steerAngleSetPoint = 0, steerAngleError = 0; //setpoint - actual
+float steerAngleActual = 0, steerAngleSetPoint = 0, steerAngleSetPointOld = 0, steerAngleError = 0; //setpoint - actual
 long steeringPosition = 0,  actualSteerPosRAW = 0; //from steering sensor steeringPosition_corr = 0,
 int  pulseCount = 0, prevEncAState = 0, prevEncBState = 0; // Steering Wheel Encoder
 bool encDebounce = false; // Steering Wheel Encoder
 
 //stepper variables
-int8_t _stepperActiveStatus = -1;           //-1 = init; 0 = off; 1 = just ON/Active; 2 = ON/Active
+int8_t _stepperActiveStatus = -1;           //-1 = init; 0 = off; 1 = just ON; 2= wait for safetyRelayTiming; 3 = ON/Active
 float stepPerPositionDegree = 1.0;
-unsigned long lastStepUpdate = 0;
+bool newWASavaliable = false;
+long safetyRelayActivationTime = 200; //wait ms to close contact of relay
+unsigned long lastSafetyRelayActivationTime = 0;
 
 //IMU, inclinometer variables
 int16_t roll16 = 0, heading16 = 0;
@@ -742,6 +755,7 @@ void loop() {
         }
   			break;
   		}
+      newWASavaliable = true; // for stepper calculation if new value is measured
   	}
 		actualSteerPosRAW = steeringPosition; // stored for >zero< Funktion
 

@@ -1,7 +1,5 @@
 #ifdef USE_CUSTOM_SETTINGS
   //general settings
-  #define EEPROM_CLEAR true                     //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again
-
   #define AOG_VERSION 20                        // Version number for version check 4.3.10 = 4+3+10 = 17  
   #define DATA_TRANS_VIA 7                      // transfer data via 0 = USB / 7 = WiFi UDP / 10 = Ethernet UDP
 
@@ -20,7 +18,7 @@
   #define MOTOR_DRIVE_DIRECTION 1               // 0 = normal, 1 = inverted
   #define MOTOR_SLOW_DRIVE_DEGREES 5            // How many degrees before decreasing Max PWM
   #define PWM_OUT_FREQU 20000                   // PWM frequency for motordriver: 1000Hz:for low heat at PWM device 20000Hz: not hearable
-  #define STEPPER_KP_TO_DEGREES_FACTOR 10       // when setting Kp by WebIO or AGO the stepper-steps per degree WAS will be recalculated "stepPerPositionDegree = Kp * STEPPER_KP_TO_DEGREES_FACTOR" to make it adjustable the common and easy way
+  #define STEPPER_KP_TO_DEGREES_OFFSET  0       // when setting Kp by WebIO or AGO the stepper-steps per degree WAS will be recalculated "stepPerPositionDegree = Kp + STEPPER_KP_TO_DEGREES_OFFSET" to make it adjustable the common and easy way
   #define STEPPER_HIGHPWM_TO_MAXSPEED_FACTOR 50 // when setting highRPM by WebIO or AGO the stepper-maxSpeed will be recalculated "maxSpeed = highRPM * STEPPER_HIGHRPM_TO_MAXSPEED_FACTOR" to make it adjustable the common and easy way
   #define STEPPER_LOWPWM_TO_ACCELERATION_FACTOR 50 // when setting lowRPM by WebIO or AGO the stepper-acceleration will be recalculated "acceleration = lowRPM * STEPPER_LOWRPM_TO_ACCELERATION_FACTOR" to make it adjustable the common and easy way
 
@@ -82,7 +80,7 @@
   
   //WiFi
   #define WIFI_SSID "TS115_WLAN"                // WiFi network Client name
-  #define WIFI_PASSWORD "TS115_WLAN"                      // WiFi network password
+  #define WIFI_PASSWORD "TS115_WLAN"            // WiFi network password
   #define WIFI_SSID_AP "Autosteer_Unit_TS115"   // name of Access point, if no WiFi found, NO password!!
   #define WIFI_TIMEOUT_ROUTER 30                // time (seconds) to wait for WIFI access, after that own Access Point starts
   #define WIFI_TIMEOUT_TIMEOUT_WEBIO 255        // time (min) afterwards webinterface is switched off

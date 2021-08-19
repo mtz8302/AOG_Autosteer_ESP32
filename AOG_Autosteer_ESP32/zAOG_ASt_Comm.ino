@@ -237,7 +237,7 @@ void parseDataFromAOG() {
                   uint16_t tempWasOffset = 0;
 									tempWasOffset = (SentenceFromAOG[10]);  //read was zero offset Hi
 									tempWasOffset |= (SentenceFromAOG[11] << 8);  //read was zero offset Lo
-                  if (Set.AOGSteerPositionZero  = 0){ //on first boot after eeprom clear and first receive of SteerSetting
+                  if (Set.AOGSteerPositionZero  == 0){ //on first boot after eeprom clear and first receive of SteerSetting
                      Set.AOGSteerPositionZero = tempWasOffset;
                   }
                   else if (Set.AOGSteerPositionZero != tempWasOffset){ //received WASoffset was changed == WAS 0 pressed or WAS slider moved in AOG
@@ -252,7 +252,7 @@ void parseDataFromAOG() {
                   //stepper
                   UpdateStepperSettings (); //Including some calculations (dodo before EEProm Write)
 
-                  EEprom_write_all();
+                  EEprom_write_FirstSet();
 
 									if (Set.debugmodeDataFromAOG) { Serial.println("got NEW steer settings from AOG"); }
 									isSteerSettingFound = false;
@@ -285,7 +285,7 @@ void parseDataFromAOG() {
                   //nearly same code as for higher version
                   uint16_t tempWasOffset = 0;
                   tempWasOffset = SentenceFromAOG[8];//read steering zero offset
-                  if (Set.AOGSteerPositionZero  = 0){ //on first boot after eeprom clear and first receive of SteerSetting
+                  if (Set.AOGSteerPositionZero  == 0){ //on first boot after eeprom clear and first receive of SteerSetting
                      Set.AOGSteerPositionZero = tempWasOffset;
                   }
                   else if (Set.AOGSteerPositionZero != tempWasOffset){ //received WASoffset was changed == WAS 0 pressed or WAS slider moved in AOG
@@ -310,7 +310,7 @@ void parseDataFromAOG() {
 
 									highLowPerDeg = (Set.highPWM - Set.lowPWM) / Set.MotorSlowDriveDegrees;
 
-									EEprom_write_all();
+									EEprom_write_FirstSet();
 
 									if (Set.debugmodeDataFromAOG) { Serial.println("got NEW steer settings from AOG V4.3.10"); }
 
@@ -342,7 +342,7 @@ void parseDataFromAOG() {
                   //stepper
                   UpdateStepperSettings ();
                   
-                  EEprom_write_all();
+                  EEprom_write_FirstSet();
 
 									if (Set.debugmodeDataFromAOG) { Serial.println("got NEW Arduino settings from AOG V4.6 or higher"); }
 

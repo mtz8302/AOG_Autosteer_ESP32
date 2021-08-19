@@ -44,48 +44,76 @@ void calcSteeringPIDandMoveMotor(void)
   if (stepperPossible){
     if (Set.output_type == 5){ //stepper  
       if (_stepperActiveStatus == -1){ //init or just OFF
+        if (Set.debugmode) { Serial.println("Stepper INIT"); }
         digitalWrite (Set.stepperEnableSafetyPIN, HIGH);
-        stepper->forceStopAndNewPosition(steerAngleActual * stepPerPositionDegree);  
+        lastSafetyRelayActivationTime = 0;
+        float tempCalculationStopNewPosition = steerAngleActual * stepPerPositionDegree;
+        stepper->forceStopAndNewPosition((int)tempCalculationStopNewPosition);  
         stepper->disableOutputs(); 
         _stepperActiveStatus = 0;
         pwmDisplay = 0;
-        if (Set.debugmode) { Serial.println("Stepper INIT"); }
       }
       else if (_stepperActiveStatus == 0){ //OFF
-        pwmDisplay = 0;
         if (steerEnable){
           _stepperActiveStatus = 1;  
         }
+        pwmDisplay = 0;
       }
-      else if (_stepperActiveStatus == 1){ //just ON
-        digitalWrite (Set.stepperEnableSafetyPIN, LOW);
-        stepper->setCurrentPosition (steerAngleActual * stepPerPositionDegree);
-        if (Set.debugmode) { Serial.print("Stepper just ON, current Pos. "); Serial.print(stepper->getCurrentPosition ());}
-        stepper->enableOutputs();
+      else if (_stepperActiveStatus == 1){ //just ON activate safetyRelay
         if (steerEnable){
-          _stepperActiveStatus = 2; 
+          digitalWrite (Set.stepperEnableSafetyPIN, LOW);
+          lastSafetyRelayActivationTime = millis ();
+          _stepperActiveStatus = 2;  
+        }
+        else {
+          _stepperActiveStatus = -1;
+        }
+        pwmDisplay = 0;
+      }
+      else if (_stepperActiveStatus == 2){ //wait for active safetyRelay
+        if (steerEnable){
+          if (millis() - lastSafetyRelayActivationTime >= safetyRelayActivationTime){
+            _stepperActiveStatus = 3;
+            float tempCalculationCurrentPosition = steerAngleActual * stepPerPositionDegree;
+            stepper->setCurrentPosition ((int)tempCalculationCurrentPosition);
+            if (Set.debugmode) { Serial.print("Stepper just ON, current Pos. "); Serial.print(stepper->getCurrentPosition ());}
+            stepper->enableOutputs();           
+          }
         }
         else {
           _stepperActiveStatus = -1;
         }
         pwmDisplay = 0; 
       }
-      else if (_stepperActiveStatus == 2){ //ON
+      else if (_stepperActiveStatus == 3){ //ON
         if (steerEnable){
           if (Set.debugmode) { Serial.print(" Stepper ON current Pos." );  Serial.print(stepper->getCurrentPosition ()); Serial.print("Stepper stepPerPositionDegree "); Serial.print(stepPerPositionDegree); }
-          if (steerAngleSetPoint != steerAngleActual){
-            if (millis() - lastStepUpdate > 200){
-              if (Set.debugmode) { Serial.print("Stepper Update Move To "); Serial.print(steerAngleSetPoint * stepPerPositionDegree); }
-              stepper->setCurrentPosition (stepPerPositionDegree * steerAngleActual);
-              stepper->moveTo (steerAngleSetPoint * stepPerPositionDegree);
-              lastStepUpdate = millis ();
-            }    
+          if (steerAngleSetPoint == steerAngleActual){ //Position OK
+              if (Set.debugmode) { Serial.print("Stepper Position OK "); }
+              stepper->stopMove();
+              float tempCalculationCurrentPosition = steerAngleActual * stepPerPositionDegree;
+              stepper->setCurrentPosition ((int)tempCalculationCurrentPosition);
+              float tempCalculationTargetPosition = steerAngleSetPoint * stepPerPositionDegree;
+              stepper->moveTo ((int)tempCalculationTargetPosition);
           }
-          else {
-            if (Set.debugmode) { Serial.print("Stepper Position OK "); }
-            stepper->stopMove();
-            stepper->setCurrentPosition (stepPerPositionDegree * steerAngleActual);
-            stepper->moveTo(stepPerPositionDegree * steerAngleActual);
+          else{ // Position is not Target
+            if (steerAngleSetPoint != steerAngleSetPointOld){ // new setpoint -> just move to new target
+              if (Set.debugmode) { Serial.print("Stepper Update Setpoint Move To "); Serial.print(steerAngleSetPoint * stepPerPositionDegree); }
+              //float tempCalculationCurrentPosition = steerAngleActual * stepPerPositionDegree;
+              //stepper->setCurrentPosition ((int)tempCalculationCurrentPosition);
+              float tempCalculationTargetPosition = steerAngleSetPoint * stepPerPositionDegree;
+              stepper->moveTo ((int)tempCalculationTargetPosition);
+            }
+            else { // still the same setpoint -> update the actual position with new WAS if possible
+              if (newWASavaliable){             
+                if (Set.debugmode) { Serial.print("Stepper Current Position Update due to WAS input, Move To "); Serial.print(steerAngleSetPoint * stepPerPositionDegree); }
+                float tempCalculationCurrentPosition = steerAngleActual * stepPerPositionDegree;
+                stepper->setCurrentPosition ((int)tempCalculationCurrentPosition);
+                float tempCalculationTargetPosition = steerAngleSetPoint * stepPerPositionDegree;
+                stepper->moveTo ((int)tempCalculationTargetPosition);
+                newWASavaliable = false;
+              }
+            }        
           }
           pwmDisplay = map(stepper->getSpeedInMilliHz(),0,Set.stepperMaxSpeed,0,255);
         }

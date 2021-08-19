@@ -10,7 +10,7 @@ void SetRelays(void)
 void UpdateStepperSettings (){
 
   //calculate values
-  stepPerPositionDegree = Set.Kp * Set.stepperKpToDegreesFactor; 
+  stepPerPositionDegree = Set.Kp + Set.stepperKpToDegreesOffset; 
   Set.stepperMaxSpeed = Set.highPWM * Set.stepperhighPWMToMaxSpeedFactor; 
   Set.stepperAcceleration = Set.lowPWM * Set.stepperlowPWMToAccelerationFactor; 
 
