@@ -252,7 +252,7 @@ void parseDataFromAOG() {
                   //stepper
                   UpdateStepperSettings (); //Including some calculations (dodo before EEProm Write)
 
-                  EEprom_write_all();
+                  EEprom_write_FirstSet();
 
 									if (Set.debugmodeDataFromAOG) { Serial.println("got NEW steer settings from AOG"); }
 									isSteerSettingFound = false;
@@ -310,7 +310,7 @@ void parseDataFromAOG() {
 
 									highLowPerDeg = (Set.highPWM - Set.lowPWM) / Set.MotorSlowDriveDegrees;
 
-									EEprom_write_all();
+									EEprom_write_FirstSet();
 
 									if (Set.debugmodeDataFromAOG) { Serial.println("got NEW steer settings from AOG V4.3.10"); }
 
@@ -342,7 +342,7 @@ void parseDataFromAOG() {
                   //stepper
                   UpdateStepperSettings ();
                   
-                  EEprom_write_all();
+                  EEprom_write_FirstSet();
 
 									if (Set.debugmodeDataFromAOG) { Serial.println("got NEW Arduino settings from AOG V4.6 or higher"); }
 

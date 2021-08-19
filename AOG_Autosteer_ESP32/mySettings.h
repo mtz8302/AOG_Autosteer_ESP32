@@ -1,7 +1,5 @@
 #ifdef USE_CUSTOM_SETTINGS
   //general settings
-  #define EEPROM_CLEAR true                    //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again
-
   #define AOG_VERSION 20                        // Version number for version check 4.3.10 = 4+3+10 = 17  
   #define DATA_TRANS_VIA 7                      // transfer data via 0 = USB / 7 = WiFi UDP / 10 = Ethernet UDP
 

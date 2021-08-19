@@ -7,8 +7,16 @@
 // StepperDriver included additions by hagre with use of "FastAccelStepper" library made by gin66 found on https://github.com/gin66/FastAccelStepper
 // Version 0.23.2 is not included PLEASE INSTALL/DOWNLOAD with Librarymanager of the ARDUINO IDE
 
-byte vers_nr = 48;
-char VersionTXT[120] = " - 17. Aug. 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, CMPS/BNO085 and Ethernet, configFile+WEB, +StepperDriver)";
+byte major_ver_nr = 1;  //nr. 2 will be e.g for complete rewrite to RTOS
+byte minor_ver_nr = 0;  //increase with each feture or significant update
+byte patch_level_ver_nr = 1; //increase during bug fixing and development until minor-version step
+char VersionTXT[120] = "18. Aug. 2021 by MTZ8302 + hagre";
+char FearureTXT[120] = "(V4.3+V5 ready, CMPS/BNO085, Ethernet, config by File+WEB, StepperDriver)";
+
+//NO EEPROM/SETTINGS-STRUCTUREe CHANGE SINCE VERSION (will not rewrite EEPROM if still in range)
+byte noChangeSince_major_ver_nr = 1;  
+byte noChangeSince_minor_ver_nr = 0;  
+byte noChangeSince_patch_level_ver_nr = 0;
 
 //##########################################################################################################
 //### Setup Zone ###########################################################################################
@@ -35,8 +43,6 @@ char VersionTXT[120] = " - 17. Aug. 2021 by MTZ8302 + hagre <br>(V4.3+V5 ready, 
 #else
 // Default Values/Settings by MTZ8302
 //general settings
-  #define EEPROM_CLEAR false                    //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again
-
   #define AOG_VERSION 20                        // Version number for version check 4.3.10 = 4+3+10 = 17  
   #define DATA_TRANS_VIA 7                      // transfer data via 0 = USB / 7 = WiFi UDP / 10 = Ethernet UDP
 
@@ -359,7 +365,6 @@ struct Storage {
 	bool debugmode = DEBUG_MODE;
 	bool debugmodeDataFromAOG = DEBUG_MODE_DATA_FROM_AOG;
 
-  boolean EEPROM_clear = EEPROM_CLEAR;  //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again (or deselect on WebConfigPage after flash and boot of new firmware)
   boolean use_LED_builtin = USE_LED_BUILTIN;
   
 };  Storage Set;

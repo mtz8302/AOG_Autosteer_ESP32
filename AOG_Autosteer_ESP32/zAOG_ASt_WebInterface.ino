@@ -134,7 +134,6 @@ void process_Request()
 			temInt = int(WiFi_Server.arg(n).toInt());
 			if (Set.debugmode) { Serial.print("Action found: "); Serial.println(temInt); }
 		}
-		if (temInt != ACTION_RESTART) { EEprom_unblock_restart(); }
 		if (temInt == ACTION_LoadDefaultVal) {
 			if (Set.debugmode) { Serial.println("load default settings from EEPROM"); }
 			EEprom_read_default();
@@ -143,7 +142,7 @@ void process_Request()
 		//save changes
 		if (WiFi_Server.argName(n) == "Save") {
 			if (Set.debugmode) { Serial.println("Save button pressed in webinterface"); }
-			EEprom_write_all();
+			EEprom_write_FirstSet();
 		}
     if (WiFi_Server.argName(n) == "SaveTempToEEPROM") {
       if (Set.debugmode) { Serial.println("SaveTempToEEPROM button pressed in webinterface"); }
@@ -273,7 +272,7 @@ void process_Request()
 		}
 		if (temInt == ACTION_SET_WAS_ZERO) {
 			Set.WebIOSteerPosZero = actualSteerPosRAW; // >zero< Funktion Set Steer Angle to 0
-			EEprom_write_all();
+			EEprom_write_FirstSet();
 		}
 		if (WiFi_Server.argName(n) == "IMU_TYPE") {
 			Set.IMUType = byte(WiFi_Server.arg(n).toInt());
@@ -300,7 +299,7 @@ void process_Request()
 			}
 			if (Set.InvertRoll == 1) { roll_avg = 0 - roll_avg; }
 			Set.roll_corr = roll_avg >> 4;
-			EEprom_write_all();
+			EEprom_write_FirstSet();
 		}
 		if (WiFi_Server.argName(n) == "ENC_TYPE") { 
 		  if (WiFi_Server.arg(n).toInt() == 1 && encoderPossible){
@@ -330,7 +329,7 @@ void process_Request()
 				delay(100);
 			}
 			Set.WorkSW_Threshold = WSThres_avg >> 3;
-			EEprom_write_all();
+			EEprom_write_FirstSet();
 		}
 		if (WiFi_Server.argName(n) == "MinSpeed") {
 			temDoub = WiFi_Server.arg(n).toDouble();
@@ -504,6 +503,11 @@ void process_Request()
       if ((argVal <= 1) && (argVal >= 0)) { TempSet.use_LED_builtin = byte(temInt);}
     }
     
+    if (WiFi_Server.argName(n) == "WebIOSteerPosZero") {
+      temInt = WiFi_Server.arg(n).toInt();
+      if ((argVal <= 65535) && (argVal >= 0)) { Set.WebIOSteerPosZero = temInt;}
+    }
+    
 		if (WiFi_Server.argName(n) == "debugmode") {
 			if (WiFi_Server.arg(n) == "true") { Set.debugmode = true; }
 			else { Set.debugmode = false; }
@@ -512,10 +516,6 @@ void process_Request()
 			if (WiFi_Server.arg(n) == "true") { Set.debugmodeDataFromAOG = true; }
 			else { Set.debugmodeDataFromAOG = false; }
 		}
-    if (WiFi_Server.argName(n) == "EEPROM_clear") {
-      if (WiFi_Server.arg(n) == "true") { Set.EEPROM_clear = true; }
-      else { Set.EEPROM_clear = false; }
-    }
 
     if (WiFi_Server.argName(n) == "StepsPerDegreeOffset") {
       argVal = int(WiFi_Server.arg(n).toInt());
@@ -532,7 +532,6 @@ void process_Request()
 
 		if (temInt == ACTION_RESTART) {
 			Serial.println("reboot ESP32: selected by webinterface");
-			EEprom_block_restart();//prevents from restarting, when webpage is reloaded. Is set to 0, when other ACTION than restart is called
 			delay(1000);
 #if HardwarePlatform == 0
 			WiFi.disconnect();
@@ -573,30 +572,16 @@ void make_HTML01() {
 	strcat(HTML_String, "<font color=\"#000000\" face=\"VERDANA,ARIAL,HELVETICA\">");
 	strcat(HTML_String, "<h1>AG Autosteer ESP config page</h1>");
 	strcat(HTML_String, "Version ");
-	strcati(HTML_String, vers_nr);
+	strcati(HTML_String, major_ver_nr);
+  strcat(HTML_String, ".");
+  strcati(HTML_String, minor_ver_nr);
+  strcat(HTML_String, ".");
+  strcati(HTML_String, patch_level_ver_nr);
+  strcat(HTML_String, " - ");
 	strcat(HTML_String, VersionTXT);
-	strcat(HTML_String, "<br><hr>");
-
-	//---------------------------------------------------------------------------------------------  
-	//EEPROM
-	strcat(HTML_String, "<h2>EEPROM</h2>");
-	strcat(HTML_String, "<form>");
-	strcat(HTML_String, "<table>");
-	set_colgroup(270, 250, 150, 0, 0);
-
-  strcat(HTML_String, "<tr><td>If it is selected, the settings in EEPROM will be reseted to compiled/default values after each reboot.<br>Uncheck this box after the first boot and press safe to keep modified settings during further reboots.</td><br>");
-  strcat(HTML_String, "<td><input type=\"checkbox\" onclick=\"sendVal('/?EEPROM_clear='+this.checked)\" name=\"EEPROM_clear\" id = \"Part\" value = \"1\" ");
-  if (Set.EEPROM_clear == 1) strcat(HTML_String, "checked ");
-  strcat(HTML_String, "> ");
-  strcat(HTML_String, "<label for =\"Part\"> <b> EEPROM_clear</b></label>");
-  strcat(HTML_String, "</td>");
-  strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
-  strcat(HTML_String, "</tr>");
-  strcat(HTML_String, "</tr>");
-  
-	strcat(HTML_String, "</table>");
-	strcat(HTML_String, "</form>");
-	strcat(HTML_String, "<br><hr>");
+	strcat(HTML_String, "<br>");
+  strcat(HTML_String, FearureTXT);
+  strcat(HTML_String, "<br><hr>");
 
   //---------------------------------------------------------------------------------------------  
   //load values of INO setup zone
@@ -1012,7 +997,15 @@ void make_HTML01() {
 	strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?ACTION=");
 	strcati(HTML_String, ACTION_SET_WAS_ZERO);
 	strcat(HTML_String, "')\" style= \"width:200px\" value=\"ZERO NOW\"></button></td>");
-	strcat(HTML_String, "<td>Your Wheels should face straight ahead</td>");
+	strcat(HTML_String, "<td>Your Wheels should face straight ahead</td>"); 
+  strcat(HTML_String, "</tr><br>");
+  strcat(HTML_String, "<tr>");
+  strcat(HTML_String, "<td>or set ZERO position manuell if you know the value </td>");
+  strcat(HTML_String, "<td><input type = \"number\" onchange=\"sendVal('/?WebIOSteerPosZero='+this.value)\" name = \"WebIOSteerPosZero\" min = \"0\" max = \"65535\" step = \"1\" style= \"width:200px\" value = \"");// placeholder = \"");
+  strcati(HTML_String, Set.WebIOSteerPosZero);
+  strcat(HTML_String, "\"></td>");
+  strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
+  strcat(HTML_String, "</tr>"); 
 
 	strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
 	strcat(HTML_String, "<tr> <td colspan=\"3\">&nbsp;</td> </tr>");
@@ -1353,7 +1346,8 @@ void make_HTML01() {
   strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?CopySettingsToTemp=true')\" style= \"width:250px\" value=\"Store actual settings to temp\"></button></td>");
   strcat(HTML_String, "</tr><br>");
   
-  strcat(HTML_String, "<tr><td><b>#3</b> Reload this Web page in your browser to display the current temp. settings follwoing below.</td><br>");
+  strcat(HTML_String, "<tr><td><b>#3</b> Reload this Web page in your browser to display the current temp. settings follwoing below. </td>");
+  strcat(HTML_String, "<td><input type= \"button\" onclick= \"location.reload()\" style= \"width:120px\" value=\"Refresh\"></button></td><br>");
   strcat(HTML_String, "</tr>");
 
   strcat(HTML_String, "<tr><td><b>#4</b> Adjust the pins+ (255 == not defined):</td><br>");
