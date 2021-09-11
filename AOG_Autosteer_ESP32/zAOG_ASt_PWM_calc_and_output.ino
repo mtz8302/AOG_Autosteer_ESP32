@@ -97,12 +97,18 @@ void calcSteeringPIDandMoveMotor(void)
               stepper->moveTo ((int)tempCalculationTargetPosition);
           }
           else{ // Position is not Target
-            if (steerAngleSetPoint != steerAngleSetPointOld){ // new setpoint -> just move to new target
+            if (calibrateStepsPerDegree) {
+              if (Set.debugmode) { Serial.print("calibrateStepsPerDegree - Stepper Update Setpoint Move To "); Serial.print(steerAngleSetPoint * stepPerPositionDegree); }
+              float tempCalculationTargetPosition = steerAngleSetPoint * stepPerPositionDegree;
+              stepper->moveTo ((int)tempCalculationTargetPosition);
+            }
+            else if (steerAngleSetPoint != steerAngleSetPointOld){ // new setpoint -> just move to new target
               if (Set.debugmode) { Serial.print("Stepper Update Setpoint Move To "); Serial.print(steerAngleSetPoint * stepPerPositionDegree); }
               //float tempCalculationCurrentPosition = steerAngleActual * stepPerPositionDegree;
               //stepper->setCurrentPosition ((int)tempCalculationCurrentPosition);
               float tempCalculationTargetPosition = steerAngleSetPoint * stepPerPositionDegree;
               stepper->moveTo ((int)tempCalculationTargetPosition);
+              steerAngleSetPointOld = steerAngleSetPoint;
             }
             else { // still the same setpoint -> update the actual position with new WAS if possible
               if (newWASavaliable){             

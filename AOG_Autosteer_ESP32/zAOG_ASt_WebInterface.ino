@@ -528,7 +528,15 @@ void process_Request()
     if (WiFi_Server.argName(n) == "lowPWMToAccelerationFactor") {
       argVal = int(WiFi_Server.arg(n).toInt());
       if ((argVal <= 1000) && (argVal >= 0)) { Set.stepperlowPWMToAccelerationFactor = int(argVal); UpdateStepperSettings ();}
-    }		
+    }	
+    if (WiFi_Server.argName(n) == "calibrateStepsPerDegree") {
+      if (WiFi_Server.arg(n) == "true") { 
+        calibrateStepsPerDegree = true;
+      }
+      else { 
+        calibrateStepsPerDegree = false; 
+      }
+    }	
 
 		if (temInt == ACTION_RESTART) {
 			Serial.println("reboot ESP32: selected by webinterface");
@@ -935,6 +943,14 @@ void make_HTML01() {
     strcat(HTML_String, "\"></td>");
     strcat(HTML_String, "<td><input type= \"button\" onclick= \"sendVal('/?Save=true')\" style= \"width:120px\" value=\"Save\"></button></td>");
     strcat(HTML_String, "</tr>");
+
+    strcat(HTML_String, "<br>");
+    strcat(HTML_String, "<tr>");
+    strcat(HTML_String, "<td>calibrateStepsPerDegree </td>");
+    strcat(HTML_String, "<td><input type=\"checkbox\" onclick=\"sendVal('/?calibrateStepsPerDegree='+this.checked)\" name=\"calibrateStepsPerDegree\" id = \"Part\" value = \"1\" ");
+    if (calibrateStepsPerDegree == true) strcat(HTML_String, "checked ");
+    strcat(HTML_String, "> ");
+    strcat(HTML_String, "<label for =\"Part\"> <b> calibrateStepsPerDegree</b></label></td></tr>");    
   }
 
 	strcat(HTML_String, "</table>");
