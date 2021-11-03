@@ -9,8 +9,8 @@
 
 byte major_ver_nr = 2;  //nr. 2 will be e.g for complete rewrite to RTOS
 byte minor_ver_nr = 0;  //increase with each feture or significant update
-byte patch_level_ver_nr = 6; //increase during bug fixing and development until minor-version step
-char VersionTXT[120] = "29. Sept. 2021 by MTZ8302 + hagre";
+byte patch_level_ver_nr = 7; //increase during bug fixing and development until minor-version step
+char VersionTXT[120] = "1. Nov. 2021 by MTZ8302 + hagre";
 char FearureTXT[120] = "(V4.3+V5 ready, CMPS/BNO085, Ethernet, config by File+WEB, StepperDriver)";
 
 //NO EEPROM/SETTINGS-STRUCTUREe CHANGE SINCE VERSION (will not rewrite EEPROM if still in range)
@@ -38,7 +38,7 @@ byte noChangeSince_patch_level_ver_nr = 4;
 #define PIN_UNDEFINED 255
 
 #ifdef USE_CUSTOM_SETTINGS
-  #include "mySettings.h"
+  #include "mySettingsTS115.h"
 #else
 // Default Values/Settings by MTZ8302
 //general settings
