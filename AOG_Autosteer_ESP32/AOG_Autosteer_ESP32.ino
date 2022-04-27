@@ -8,15 +8,15 @@
 // Version 0.23.2 is not included PLEASE INSTALL/DOWNLOAD with Librarymanager of the ARDUINO IDE
 
 byte major_ver_nr = 2;  //nr. 2 will be e.g for complete rewrite to RTOS
-byte minor_ver_nr = 0;  //increase with each feture or significant update
-byte patch_level_ver_nr = 7; //increase during bug fixing and development until minor-version step
-char VersionTXT[120] = "1. Nov. 2021 by MTZ8302 + hagre";
-char FearureTXT[120] = "(V4.3+V5 ready, CMPS/BNO085, Ethernet, config by File+WEB, StepperDriver)";
+byte minor_ver_nr = 1;  //increase with each feture or significant update
+byte patch_level_ver_nr = 0; //increase during bug fixing and development until minor-version step
+char VersionTXT[120] = "27. Apr. 2022 by MTZ8302 + hagre";
+char FearureTXT[120] = "(V5.6 UDP ready, CMPS/BNO085, Ethernet, config by File+WEB, StepperDriver)";
 
 //NO EEPROM/SETTINGS-STRUCTUREe CHANGE SINCE VERSION (will not rewrite EEPROM if still in range)
 byte noChangeSince_major_ver_nr = 2;  
-byte noChangeSince_minor_ver_nr = 0;  
-byte noChangeSince_patch_level_ver_nr = 4;
+byte noChangeSince_minor_ver_nr = 1;  
+byte noChangeSince_patch_level_ver_nr = 0;
 
 //##########################################################################################################
 //### Setup Zone ###########################################################################################
@@ -121,19 +121,19 @@ byte noChangeSince_patch_level_ver_nr = 4;
   #define PORT_DESTINATION 9999                 // port of AOG that listens
   
   //WiFi
-  #define WIFI_SSID "Fendt_209V"                  // WiFi network Client name
+  #define WIFI_SSID "Fendt_209V"                // WiFi network Client name
   #define WIFI_PASSWORD ""                      // WiFi network password
-  #define WIFI_SSID_AP "Autosteer_unit_Net"       // name of Access point, if no WiFi found, NO password!!
+  #define WIFI_SSID_AP "Autosteer_unit_Net"     // name of Access point, if no WiFi found, NO password!!
   #define WIFI_TIMEOUT_ROUTER 120               // time (seconds) to wait for WIFI access, after that own Access Point starts
   #define WIFI_TIMEOUT_TIMEOUT_WEBIO 255        // time (min) afterwards webinterface is switched off
-  #define WIFI_MYIP {192, 168, 1, 77}         // autosteer module 
-  #define WIFI_GWIP {192, 168, 1, 1}          // Gateway IP only used if Accesspoint created
+  #define WIFI_MYIP {192, 168, 5, 77}           // autosteer module 
+  #define WIFI_GWIP {192, 168, 5, 1}            // Gateway IP only used if Accesspoint created
   #define WIFI_IPDEST_ENDING 255                // ending of IP address to send UDP data to
   #define WIFI_MASK {255, 255, 255, 0}
-  #define WIFI_MYDNS {8, 8, 8, 8}              //optional
+  #define WIFI_MYDNS {8, 8, 8, 8}               //optional
 
   //Ethernet
-  #define ETHERNET_MYIP {192, 168, 1, 78}     // autosteer module 
+  #define ETHERNET_MYIP {192, 168, 5, 78}       // autosteer module 
   #define ETHERNET_IPDEST_ENDING 255            // ending of IP address to send UDP data to
   #define ETHERNET_MAC {0x70,0x69,0x69,0x2D,0x30,0x31}
   #define ETHERNET_STATIC_IP false              // false = use DHPC and set last number to 80 (x.x.x.80) / true = use IP as set above
