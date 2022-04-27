@@ -1,6 +1,6 @@
 // ESP32 code for autosteer unit for AgOpenGPS
 
-// ready for AOG V4.3 + V5.x Version
+// ready for AOG V4.3 + V5.x Version and V5.6 UDP
 // PINs for GormR central unit PCB (V1.8) see GitHub https://github.com/GormR/HW_for_AgOpenGPS
 // by MTZ8302 see GitHub https://github.com/mtz8302 and Youtube Ma Ha MTZ8302 https://www.youtube.com/channel/UCv44DlUXQJKbQjzaOUssVgw
 // some small additions by hagre 
