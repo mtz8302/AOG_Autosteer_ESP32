@@ -84,14 +84,14 @@
   #define WIFI_SSID_AP "Autosteer_Unit_TS115"   // name of Access point, if no WiFi found, NO password!!
   #define WIFI_TIMEOUT_ROUTER 30                // time (seconds) to wait for WIFI access, after that own Access Point starts
   #define WIFI_TIMEOUT_TIMEOUT_WEBIO 255        // time (min) afterwards webinterface is switched off
-  #define WIFI_MYIP {192, 168, 5, 77}           // autosteer module 
-  #define WIFI_GWIP {192, 168, 5, 1}            // Gateway IP only used if Accesspoint created
+  #define WIFI_MYIP {192, 168, 99, 77}          // autosteer module 
+  #define WIFI_GWIP {192, 168, 99, 1}           // Gateway IP only used if Accesspoint created
   #define WIFI_IPDEST_ENDING 255                // ending of IP address to send UDP data to
   #define WIFI_MASK {255, 255, 255, 0}
   #define WIFI_MYDNS {8, 8, 8, 8}               //optional
 
   //Ethernet
-  #define ETHERNET_MYIP {192, 168, 5, 78}       // autosteer module 
+  #define ETHERNET_MYIP {192, 168, 99, 78}      // autosteer module 
   #define ETHERNET_IPDEST_ENDING 255            // ending of IP address to send UDP data to
   #define ETHERNET_MAC {0x70,0x69,0x69,0x2D,0x30,0x31}
   #define ETHERNET_STATIC_IP false              // false = use DHPC and set last number to 80 (x.x.x.80) / true = use IP as set above
