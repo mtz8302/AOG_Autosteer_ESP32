@@ -234,14 +234,25 @@ void parseDataFromAOG() {
 									Set.lowPWM = (float)SentenceFromAOG[7];   // read lowPWM from AgOpenGPS
 									Set.minPWM = SentenceFromAOG[8]; //read the minimum amount of PWM for instant on
 									Set.steerSensorCounts = float(SentenceFromAOG[9]); //sent as setting displayed in AOG
-							//		Set.wasOffset = (SentenceFromAOG[10]);  //read was zero offset Hi
-							//		Set.wasOffset |= (SentenceFromAOG[11] << 8);  //read was zero offset Lo
+                  uint16_t tempWasOffset = 0;
+									tempWasOffset = (SentenceFromAOG[10]);  //read was zero offset Hi
+									tempWasOffset |= (SentenceFromAOG[11] << 8);  //read was zero offset Lo
+                  if (Set.AOGSteerPositionZero  == 0){ //on first boot after eeprom clear and first receive of SteerSetting
+                     Set.AOGSteerPositionZero = tempWasOffset;
+                  }
+                  else if (Set.AOGSteerPositionZero != tempWasOffset){ //received WASoffset was changed == WAS 0 pressed or WAS slider moved in AOG
+                    Set.WebIOSteerPosZero = actualSteerPosRAW; // >zero< Funktion Set Steer Angle to 0
+                    Set.AOGSteerPositionZero = tempWasOffset;
+                  }                 
 									Set.AckermanFix = SentenceFromAOG[12];
-
-									EEprom_write_all();
 
 									// for PWM High to Low interpolator
 									highLowPerDeg = ((float)(Set.highPWM - Set.lowPWM)) / Set.MotorSlowDriveDegrees;
+                  
+                  //stepper
+                  UpdateStepperSettings (); //Including some calculations (dodo before EEProm Write)
+
+                  EEprom_write_FirstSet();
 
 									if (Set.debugmodeDataFromAOG) { Serial.println("got NEW steer settings from AOG"); }
 									isSteerSettingFound = false;
@@ -268,14 +279,28 @@ void parseDataFromAOG() {
 									Set.Kp = (float)SentenceFromAOG[4];       // read Kp from AgOpenGPS
 									Set.lowPWM = (float)SentenceFromAOG[5];     // read deadZone from AgOpenGPS
 									Set.Kd = (float)SentenceFromAOG[6] * 1.0;       // read Kd from AgOpenGPS
-									Set.Ko = (float)SentenceFromAOG[7] * 0.1;       // read Ko from AgOpenGPS
-									//Set.steeringPositionZero = (WAS_ZERO)+DataFromAOG[6];//read steering zero offset  
-									Set.AOGSteerPositionZero = float(SentenceFromAOG[8]) - 127;//read steering zero offset  
+									Set.Ko = (float)SentenceFromAOG[7] * 0.1;       // read Ko from AgOpenGPS 
 
+                  //not tested with V17 -------------------------------------------------------------------------------------------------------------
+                  //nearly same code as for higher version
+                  uint16_t tempWasOffset = 0;
+                  tempWasOffset = SentenceFromAOG[8];//read steering zero offset
+                  if (Set.AOGSteerPositionZero  == 0){ //on first boot after eeprom clear and first receive of SteerSetting
+                     Set.AOGSteerPositionZero = tempWasOffset;
+                  }
+                  else if (Set.AOGSteerPositionZero != tempWasOffset){ //received WASoffset was changed == WAS 0 pressed or WAS slider moved in AOG
+                    Set.WebIOSteerPosZero = actualSteerPosRAW; // >zero< Funktion Set Steer Angle to 0
+                    Set.AOGSteerPositionZero = tempWasOffset;
+                  } 
+                  //not tested with V17 -------------------------------------------------------------------------------------------------------------
+                  
 									Set.minPWM = SentenceFromAOG[9]; //read the minimum amount of PWM for instant on
 									Set.highPWM = SentenceFromAOG[10]; //
 
 									Set.steerSensorCounts = SentenceFromAOG[11];
+
+                  //stepper
+                  UpdateStepperSettings ();
 
 									int checksum = 0;
 									for (byte i = 4; i < 12; i++) checksum += SentenceFromAOG[i];
@@ -285,7 +310,7 @@ void parseDataFromAOG() {
 
 									highLowPerDeg = (Set.highPWM - Set.lowPWM) / Set.MotorSlowDriveDegrees;
 
-									EEprom_write_all();
+									EEprom_write_FirstSet();
 
 									if (Set.debugmodeDataFromAOG) { Serial.println("got NEW steer settings from AOG V4.3.10"); }
 
@@ -312,7 +337,12 @@ void parseDataFromAOG() {
 									//if (bitRead(SentenceFromAOG[8], 1)) Set.PressureSensor = 1; else Set.PressureSensor = 0;
 									//if (bitRead(SentenceFromAOG[8], 2)) Set.CurrentSensor = 1; else Set.CurrentSensor = 0;
 
-									EEprom_write_all();
+									
+
+                  //stepper
+                  UpdateStepperSettings ();
+                  
+                  EEprom_write_FirstSet();
 
 									if (Set.debugmodeDataFromAOG) { Serial.println("got NEW Arduino settings from AOG V4.6 or higher"); }
 
@@ -349,6 +379,9 @@ void parseDataFromAOG() {
 
 											byte checksum = 0;
 											for (int i = 2; i < 10; i++) checksum += udpData[i];
+
+                      //stepper
+                      UpdateStepperSettings ();
 		*/
 									isSteerArdConfigFoundV17 = false;
 									incomSentenceDigit = 1;

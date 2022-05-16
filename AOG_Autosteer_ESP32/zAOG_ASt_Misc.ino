@@ -7,6 +7,48 @@ void SetRelays(void)
 
 }
 
+void UpdateStepperSettings (){
+
+  //calculate values
+  stepPerPositionDegree = Set.Kp + Set.stepperKpToDegreesOffset; 
+  Set.stepperMaxSpeed = Set.highPWM * Set.stepperhighPWMToMaxSpeedFactor; 
+  Set.stepperAcceleration = Set.lowPWM * Set.stepperlowPWMToAccelerationFactor; 
+
+  //set values
+ 
+  if (stepperPossible) {
+    if (Set.MotorDriveDirection == 1){
+      stepper->setDirectionPin(Set.stepperDirPIN, true);
+      if (Set.debugmode) {
+        Serial.print("stepperDirPIN (HIGH counts up) is set to ");
+        Serial.println(Set.stepperDirPIN);
+      }
+    }
+    else {
+      stepper->setDirectionPin(Set.stepperDirPIN, false);
+      if (Set.debugmode) {
+        Serial.print("stepperStepPIN (LOW counts up) is set to ");
+        Serial.println(Set.stepperDirPIN);
+      }
+    }
+  
+    stepper->setSpeedInHz(Set.stepperMaxSpeed); 
+    stepper->setAcceleration(Set.stepperAcceleration);
+    
+    if (Set.debugmode) { 
+      Serial.println("Update StepperSettings: "); 
+      Serial.print("stepPerPositionDegree: ");
+      Serial.println(stepPerPositionDegree); 
+      Serial.print("stepperMaxSpeed: ");
+      Serial.println(Set.stepperMaxSpeed); 
+      Serial.print("stepperAcceleration: ");
+      Serial.println(Set.stepperAcceleration); 
+      Serial.print("MotorDriveDirection: ");
+      Serial.println(Set.MotorDriveDirection);
+    }
+  }
+}
+
 //-------------------------------------------------------------------------------------------------
 //9. Maerz 2021
 
@@ -61,5 +103,3 @@ void WiFi_LED_blink(void* pvParameters)
 		}
 	}
 }
-
-
