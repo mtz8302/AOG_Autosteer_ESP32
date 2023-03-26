@@ -467,7 +467,7 @@ void SendTwoThirty(byte check)
 			for (byte n = 0; n < sizeof(TwoThirtyV17) - 1; n++) {
 				Serial.print(TwoThirtyV17[n]); Serial.print(",");
 			}
-			Serial.println(TwoThirtyV17[sizeof(TwoThirtyV17)]);//drop , after byte 9
+			Serial.println(TwoThirtyV17[sizeof(TwoThirtyV17)-1]);//drop , after byte 9
 		}
 		else {
 			if (Set.DataTransVia > 10) {//WiFi UDP
@@ -487,7 +487,8 @@ void SendTwoThirty(byte check)
 		}
 	}
 	else {
-		byte TwoThirtyV20[] = { FromAOGSentenceHeader[0],FromAOGSentenceHeader[1],FromAOGSentenceHeader[2],230,2,check,Set.aogVersion, check + Set.aogVersion };
+    byte temp = check + Set.aogVersion;
+		byte TwoThirtyV20[] = { FromAOGSentenceHeader[0],FromAOGSentenceHeader[1],FromAOGSentenceHeader[2],230,2,check,Set.aogVersion, temp};
 		if (Set.DataTransVia < 5) {//USB
 			Serial.write(TwoThirtyV20, sizeof(TwoThirtyV20));
 		}

@@ -27,7 +27,7 @@
                                                 // 1 = Single Mode of ADS1115 - Sensor Signal at A0 (ADS)
                                                 // 2 = Differential Mode - Connect Sensor GND to A1, Signal to A0
   #define INVERT_WAS 1                          // set to 1 to Change Direction of Wheel Angle Sensor - to +   
-  #define ACKERMAN_FIX 78                       // if values for left and right are the same: 100                                            
+  #define ACKERMAN_FIX 60                       // if values for left and right are the same: 100                                            
   
   //SWITCHES
   #define STEER_SWITCH_TYPE 1                   // 0 = enable = switch high (3,3V) //1 = enable = switch low(GND) //2 = toggle = button to low(GND)
@@ -39,7 +39,7 @@
   #define WORK_SW_THRESHOLD 1600                // Value for analog hitch level to switch workswitch  (0-4096)
 
   //AUTOSTEER
-  #define AUTOTSTEER_MIN_SPEED 0.2               // Min speed to use autosteer km/h
+  #define AUTOTSTEER_MIN_SPEED 0.1               // Min speed to use autosteer km/h
   #define AUTOTSTEER_MAX_SPEED 30                // Max speed to use autosteer km/h
 
   //IMU/COMPAS
@@ -160,7 +160,7 @@
   #define AOG_STEER_POSITION_ZERO 0             // keep value to 0, needed to keep WEBIO and AGIO zero function working
   #define STEER_SENSOR_COUNTS 100
   #define ROLL_CORR 200
-  #define MIN_PWM 40
-  #define HIGH_PWM 150
-  #define LOW_PWM 60
+  #define MIN_PWM 6
+  #define HIGH_PWM 164
+  #define LOW_PWM 156
 #endif

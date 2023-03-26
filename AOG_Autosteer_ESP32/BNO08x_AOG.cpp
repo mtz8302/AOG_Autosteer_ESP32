@@ -1599,7 +1599,7 @@ long BNO080::getReportInterval()
 boolean BNO080::checkReportEnable(uint8_t reportID, uint16_t timeBetweenReports)
 {
 	long reportIntervalMicrosecond = timeBetweenReports * 1000L;
-	if(getFeatureReportId() == reportID & getReportInterval() == reportIntervalMicrosecond) return (true);
+	if((getFeatureReportId() == reportID) && (getReportInterval() == reportIntervalMicrosecond)) return (true);
 	else return (false);
 }
 

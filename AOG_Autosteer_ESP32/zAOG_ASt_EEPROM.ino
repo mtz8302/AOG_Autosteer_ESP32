@@ -59,6 +59,7 @@ int VersionCompare (int oldNr, int newNr, int NoChangeSinceNr){
   else if (oldNr > newNr){ //decrease
     return -1;
   }
+  return -1;
 }
 //--------------------------------------------------------------
 byte EEprom_empty_check() {

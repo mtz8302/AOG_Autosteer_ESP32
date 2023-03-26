@@ -9,8 +9,8 @@
 
 byte major_ver_nr = 2;  //nr. 2 will be e.g for complete rewrite to RTOS
 byte minor_ver_nr = 1;  //increase with each feture or significant update
-byte patch_level_ver_nr = 1; //increase during bug fixing and development until minor-version step
-char VersionTXT[120] = "29. Apr. 2022 by MTZ8302 + hagre";
+byte patch_level_ver_nr = 2; //increase during bug fixing and development until minor-version step
+char VersionTXT[120] = "26. Mar. 2023 by MTZ8302 + hagre";
 char FearureTXT[120] = "(V5.6 UDP ready, CMPS/BNO085, Ethernet, config by File+WEB, StepperDriver)";
 
 //NO EEPROM/SETTINGS-STRUCTUREe CHANGE SINCE VERSION (will not rewrite EEPROM if still in range)
