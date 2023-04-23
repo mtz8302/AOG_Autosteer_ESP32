@@ -1,11 +1,13 @@
 // ESP32 code for autosteer unit for AgOpenGPS
 
-// ready for AOG V4.3 + V5.x Version
+//Version für Adafruit feather auf Fendt 209V
+ 
+
 // PINs for GormR central unit PCB (V1.8) see GitHub https://github.com/GormR/HW_for_AgOpenGPS
 // by MTZ8302 see GitHub https://github.com/mtz8302 and Youtube Ma Ha MTZ8302 https://www.youtube.com/channel/UCv44DlUXQJKbQjzaOUssVgw
 
-byte vers_nr = 44;
-char VersionTXT[120] = " - 16. April 2021 by MTZ8302<br>(V4.3 + V5 ready, CMPS/BNO085 and Ethernet support)";
+byte vers_nr = 55;
+char VersionTXT[120] = " - 17. Apr 2023 by MTZ8302<br>(AsyncUDP for WiFi, AgIO heartbeat, CMPS14/BNO085 via I2C and Ethernet support, new OTA)";
 
 //##########################################################################################################
 //### Setup Zone ###########################################################################################
@@ -16,45 +18,56 @@ char VersionTXT[120] = " - 16. April 2021 by MTZ8302<br>(V4.3 + V5 ready, CMPS/B
 //
 //##########################################################################################################
 
-//to do: 230 not called in V20, steerPostionZero from AOG is ignorred, only zero button in WebIO working 
+//to do: steerPostionZero from AOG is ignorred, only zero button in WebIO working 
 
 
-#define useLED_BUILTIN  0	          // some ESP board have a build in LED, some not. Here it's the same funtion as the WiFi LED
+#define useLED_BUILTIN  1//0	          // some ESP board have a build in LED, some not. Here it's the same funtion as the WiFi LED
 
 
 struct Storage {
 	//WiFi
-	char ssid1[24] = "Fendt_209V";                // WiFi network Client name
-	char password1[24] = "";                      // WiFi network password
-	char ssid_ap[24] = "Autosteer_unit_Net";	  // name of Access point, if no WiFi found, NO password!!
-	uint16_t timeoutRouter = 120;                 // time (seconds) to wait for WIFI access, after that own Access Point starts
+	char ssid1[24] = "";					      // WiFi network Client name
+	char password1[24] = "";                      // WiFi network password//Accesspoint name and password
+	char ssid2[24] = "Fendt_209V_Tablet";	      // WiFi network Client name
+	char password2[24] = "Fendt_209V";            // WiFi network password//Accesspoint name and password
+	char ssid3[24] = "Fendt_209V";                // WiFi network Client name
+	char password3[24] = "";                      // WiFi network password//Accesspoint name and password
+	char ssid4[24] = "";                          // WiFi network Client name
+	char password4[24] = "";                      // WiFi network password//Accesspoint name and password
+	char ssid5[24] = "";                          // WiFi network Client name
+	char password5[24] = "";                      // WiFi network password//Accesspoint name and password
+	char ssid_ap[24] = "Autosteer_unit_Net";      // name of Access point, if no WiFi found, NO password!!
+	uint16_t timeoutRouterWiFi = 120;             // time (seconds) to wait for WIFI access, after that own Access Point starts
+	uint16_t timeoutRouterEth = 120;              // time (s) to search for cable Ethernet connection, when time has passed changing to WiFi data transfer
 	byte timeoutWebIO = 255;                      // time (min) afterwards webinterface is switched off
 
-	byte WiFi_myip[4] = { 192, 168, 1, 77 };      // autosteer module 
-	byte WiFi_gwip[4] = { 192, 168, 1, 1 };       // Gateway IP only used if Accesspoint created
+	byte WiFi_myip[4] = { 192, 168, 137, 77 };    // autosteer module 
+	byte WiFi_gwip[4] = { 192, 168, 137, 1 };     // Gateway IP only used if Accesspoint created
 	byte WiFi_ipDest_ending = 255;                // ending of IP address to send UDP data to
 	byte mask[4] = { 255, 255, 255, 0 };
 	byte myDNS[4] = { 8, 8, 8, 8 };               //optional
 
 	//Ethernet
-	byte Eth_myip[4] = { 192, 168, 1, 78 };       // autosteer module 
+	byte Eth_myip[4] = { 192, 168, 5, 78 };       // autosteer module 
 	byte Eth_ipDest_ending = 255;                 // ending of IP address to send UDP data to
 	byte Eth_mac[6] = { 0x70,0x69,0x69,0x2D,0x30,0x31 };
-	bool Eth_static_IP = false;					          // false = use DHPC and set last number to 80 (x.x.x.80) / true = use IP as set above
+	bool Eth_static_IP = false;					  // false = use DHPC and set last number to 80 (x.x.x.80) / true = use IP as set above
 
 	unsigned int PortAutostToAOG = 5577;          // this is port of this module: Autosteer = 5577 IMU = 5566 GPS = 
 	unsigned int PortFromAOG = 8888;              // port to listen for AOG
 	unsigned int PortDestination = 9999;          // port of AOG that listens
+	uint16_t BaudRate = 38400;                    // Baudrate = speed of serial port or USB or Bluetooth. AOG uses 38400 for UART
 
 	//general settings
-	uint8_t aogVersion = 20;			                // Version number for version check 4.3.10 = 4+3+10 = 17	
+	uint8_t AgIOHeartbeat_answer = 0;			  //0: don't answer (default for WiFi), IP is send in any case	
+	uint8_t aogVersion = 20;			          // Version number not used at the moment
 
 	byte DataTransVia = 7;                        // transfer data via 0 = USB / 7 = WiFi UDP / 10 = Ethernet UDP
 
 	uint8_t output_type = 2;                      // set to 1  if you want to use Stering Motor + Cytron MD30C Driver
-																// set to 2  if you want to use Stering Motor + IBT 2  Driver
-																// set to 3  if you want to use IBT 2  Driver + PWM 2-Coil Valve
-																// set to 4  if you want to use  IBT 2  Driver + Danfoss Valve PVE A/H/M
+												  // set to 2  if you want to use Stering Motor + IBT 2  Driver
+												  // set to 3  if you want to use IBT 2  Driver + PWM 2-Coil Valve
+												  // set to 4  if you want to use  IBT 2  Driver + Danfoss Valve PVE A/H/M
 
 
 	uint16_t PWMOutFrequ = 20000;                 // PWM frequency for motordriver: 1000Hz:for low heat at PWM device 20000Hz: not hearable
@@ -64,43 +77,37 @@ struct Storage {
 	uint8_t MotorSlowDriveDegrees = 5;	          // How many degrees before decreasing Max PWM
 
 	uint8_t WASType = 2;                          // 0 = No ADS installed, Wheel Angle Sensor connected directly to ESP at GPIO 36 (pin set below) (attention 3,3V only)
-																// 1 = Single Mode of ADS1115 - Sensor Signal at A0 (ADS)
-																// 2 = Differential Mode - Connect Sensor GND to A1, Signal to A0
+												  // 1 = Single Mode of ADS1115 - Sensor Signal at A0 (ADS)
+												  // 2 = Differential Mode - Connect Sensor GND to A1, Signal to A0
 
 	uint8_t IMUType = 0;                          // 0: none, 1: BNO055 IMU, 2: CMPS14, 3: BNO080 + BNO085
 
 	//CMPS14	
 	int CMPS14_ADDRESS = 0x60;                    // Address of CMPS14 shifted right one bit for arduino wire library
-	float CMPS14HeadingCorrection = 0.0;		      // not used at the moment
-	float CMPS14RollCorrection = 0.0;		          // not used at the moment
-	uint8_t CMPS14UsedAxis = 0;		                // not used at the moment
+	float CMPS14HeadingCorrection = 0.0;		  // not used at the moment
+	float CMPS14RollCorrection = 0.0;		      // not used at the moment
 
-	// BNO08x
+	//BNO08x
 	uint8_t bno08xAddresses[2] = { 0x4A,0x4B };	  // BNO08x address variables to check where it is
-	float BNOHeadingCorrection = 0.0;		          // not used at the moment
-	float BNORollCorrection = 0.0;		            // not used at the moment
-	uint8_t BNOUsedAxis = 0;		                  // not used at the moment
-
-	//MMA
-	uint8_t MMAInstalled = 0;                     // set to 1 if MMA8452 is installed at address 1C (Adr PIN to GND) set to 2 at address 1D (Adr PIN open)
-	uint8_t UseMMA_X_Axis = 1;		                // 1: use X axis (default) 0: use Y axis
-	uint8_t MMA_roll_MAX_STEP = 10;		            // max roll step per loop (5-20) higher = filter less
+	float BNOHeadingCorrection = 0.0;		      // not used at the moment
+	float BNORollCorrection = 0.0;		          // not used at the moment
+	uint8_t BNOUsedAxis = 0;		              // not used at the moment
 
 	uint8_t InvertRoll = 0;                       // 0: no, set to 1 to change roll direction
 	uint8_t InvertWAS = 0;                        // set to 1 to Change Direction of Wheel Angle Sensor - to + 
 
 	uint8_t ShaftEncoder = 0;                     // Steering Wheel ENCODER Installed
-	uint8_t PressureSensor = 0;		        // (not supported at the moment)
-	uint8_t CurrentSensor = 0;		        // (not supported at the moment)
+	uint8_t PressureSensor = 0;		              // (not supported at the moment)
+	uint8_t CurrentSensor = 0;		              // (not supported at the moment)
 	uint8_t pulseCountMax = 3;                    // Switch off Autosteer after x Pulses from Steering wheel encoder 
 
-	uint16_t WebIOSteerPosZero = 10300;	          // first value for steer zero position ADS: 11000 for EPS32 AD PIN: 2048
+	uint16_t WebIOSteerPosZero = 10300;//;	4096  // first value for steer zero position ADS: 11000 for EPS32 AD PIN: 2048
 
-	uint8_t AckermanFix = 78;		                  // if values for left and right are the same: 100 
+	uint8_t AckermanFix = 78;		              // if values for left and right are the same: 100 
 
 	uint8_t SteerSwitchType = 1;                  // 0 = enable = switch high (3,3V) //1 = enable = switch low(GND) //2 = toggle = button to low(GND)
-																// 3 = enable = button to high (3,3V), disable = button to low (GND), neutral = 1,65V
-													// 255 = no steer switch, allways on if AOG steering is active
+												  // 3 = enable = button to high (3,3V), disable = button to low (GND), neutral = 1,65V
+												  // 255 = no steer switch, allways on if AOG steering is active
 
 	uint8_t WorkSW_mode = 2;                      // 0 = disabled // 1 = digital ON/OFF // 2 = analog Value 0...4095 (0 - 3,3V)
 
@@ -114,27 +121,27 @@ struct Storage {
 
 	// IO pins ------------------------------------------------------------------
 
-	// set to 255 for unused !!!!!
-	uint8_t SDA = 21;	                  // I2C Pins
+	// set to 255 for unused32 !!!!!
+	uint8_t SDA = 21;	                       // I2C Pins
 	uint8_t SCL = 22;
 
-	uint8_t AutosteerLED_PIN = 2;       // light on active autosteer and IBT2
-	uint8_t LEDWiFi_PIN = 0;            // light on WiFi connected, flashes on searching Network. If GPIO 0 is used LED must be activ LOW otherwise ESP won't boot
-	uint8_t LEDWiFi_ON_Level = LOW;	    // HIGH = LED on high, LOW = LED on low
+	uint8_t AutosteerLED_PIN = 2;             // light on active autosteer and IBT2
+	uint8_t LEDWiFi_PIN = 0;     ;            // light on WiFi connected, flashes on searching Network. If GPIO 0 is used LED must be activ LOW otherwise ESP won't boot
+	uint8_t LEDWiFi_ON_Level = HIGH;          // HIGH = LED on high, LOW = LED on low
 
-										// (not supported at the moment) relais for section control
+	// (not supported at the moment) relais for section control
 	uint8_t Relay_PIN[16] = { 255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255 }; 
 	uint8_t Tram_PIN[3] = { 255,255,255 };  // (not supported at the moment) relais for tramline control
 	uint8_t Relays_ON = HIGH;		        // HIGH = Relay on high, LOW = Relay on low
 
-	uint8_t WAS_PIN = 36;               // PIN for Wheel Angle Sensor (none, if ADS used)
+	uint8_t WAS_PIN = 36;                // PIN for Wheel Angle Sensor (none, if ADS used)
 	uint8_t WAS_Diff_GND_PIN = 39;
 	uint8_t WORKSW_PIN = 33;            // PIN for workswitch (can be analog or on/off switch see WorkSW_mode)
 	uint8_t STEERSW_PIN = 34;           // Pin for steer button or switch (see SteerSwitchType)
 	uint8_t encA_PIN = 4;               // Pin for steer encoder, to turn off autosteer if steering wheel is used
 	uint8_t encB_PIN = 32;              // Pin for steer encoder, to turn off autosteer if steering wheel is used
 
-	uint8_t Servo_PIN = 16;			        // (not supported at the moment) Pin for servo to pull motor to steering wheel
+	uint8_t Servo_PIN = 16;	            // (not supported at the moment) Pin for servo to pull motor to steering wheel
 
 	uint8_t PWM_PIN = 27;               // PWM Output to motor controller (IBT2 or cytron)
 	uint8_t DIR_PIN = 26;               // direction output to motor controller (IBT2 or cytron)
@@ -142,8 +149,8 @@ struct Storage {
 
 	uint8_t Eth_CS_PIN = 5;             // CS PIN with SPI Ethernet hardware  SPI config: MOSI 23 / MISO 19 / CLK18 / CS5
 
-	uint8_t CAN_RX_PIN = 25;		        // (not supported at the moment) CAN bus 
-	uint8_t CAN_TX_PIN = 17;		        // (not supported at the moment)
+	uint8_t CAN_RX_PIN = 25;	        //(not supported at the moment) CAN bus 
+	uint8_t CAN_TX_PIN = 17;	        //(not supported at the moment)
 
 	//##########################################################################################################
 	//### End of Setup Zone ####################################################################################
@@ -154,7 +161,7 @@ struct Storage {
 	float Ki = 0.001f;    //integral gain
 	float Kd = 1.0f;      //derivative gain 
 	float AOGSteerPositionZero = 0;
-	float steerSensorCounts = 100;
+	float steerSensorCounts = 68;
 	uint16_t roll_corr = 200;
 	byte minPWM = 40, highPWM = 150, lowPWM = 60;
 
@@ -166,26 +173,25 @@ struct Storage {
 boolean EEPROM_clear = false;  //set to true when changing settings to write them as default values: true -> flash -> boot -> false -> flash again
 
 
+// sentences to AOG V5 -------------------------------------------------------------------	
+uint8_t helloFromAutoSteer[] = { 128, 129, 126, 126, 5, 0, 0, 0, 0, 0, 71 }; //hello from SC sent back to AgIO
 
-//Sentence up to V4.3 -----------------------------------------------------------------------------	
-//steer PGN numbers are the same in V4.3
-#define steerDataSentenceToAOGLengthV17 10
-
-// sentences to AOG V4.6 and up -------------------------------------------------------------------	
 const byte FromAOGSentenceHeader[3] = { 0x80,0x81,0x7F };
+#define AgIO_heartbeat 0xC8// = 0xC8
+#define AgIO_ScanRequest 0xCA//AgIO asking for IP -> Ethernet/WiFi GPS sends IP 
 #define steerDataToAOGHeader  0xFD
 #define steerDataFromAOGHeader  0xFE 
 #define steerArdConfFromAOGHeader 0xFB
 #define steerSettingsFromAOGHeader  0xFC
 #define steerDataSentenceToAOGLength  14
 
-//global, as serial/USB may not come at once, so values must stay for next loop
-byte incomSentenceDigit = 0,DataToAOGLength;
+byte incomSentenceDigit = 0;
 bool isSteerDataFound = false, isSteerSettingFound = false, isSteerArdConfFound = false, isSteerArdConfigFound = false;
-bool isSteerDataFoundV17 = false, isSteerSettingFoundV17 = false, isSteerArdConfFoundV17 = false, isSteerArdConfigFoundV17 = false;
+bool isAgIOHeartbeatFound = false, isAgIOScanRequestFound = false;
+bool SectRelaysUsed = false;
 
-#define incommingDataArraySize 5
-byte incommingBytes[incommingDataArraySize][500], incommingBytesArrayNr = 0, incommingBytesArrayNrToParse = 0;
+#define incommingDataArraySize 10
+byte incommingBytes[incommingDataArraySize][512], incommingBytesArrayNr = 0, incommingBytesArrayNrToParse = 0;
 unsigned int incommingDataLength[incommingDataArraySize] = { 0,0,0,0,0 };
 #define SentenceFromAOGMaxLength 14
 byte SentenceFromAOG[SentenceFromAOGMaxLength], SentenceFromAOGLength;
@@ -198,32 +204,32 @@ byte steerToAOG[14] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 #include <Update.h>
 #include "Wire.h"
 #include "BNO055_AOG.h"
-#include "zADS1115.h"
-#include "MMA8452_AOG.h"  //MMA inclinometer
-#include <WiFiUdp.h>
+#include <Adafruit_ADS1X15.h>
+#include <AsyncUDP.h>
 #include <WebServer.h>
 #include <WiFiClient.h>
 #include <WiFi.h>
 #include <Ethernet.h>
-#include <EthernetUdp.h>   
 #include "BNO08x_AOG.h"
+#include "zAOG_ESP32Ping.h"
+#include "zAOG_Ping.h"
+
 
 // Instances --------------------------------------------------------------------------------------
-ADS1115_lite adc(ADS1115_DEFAULT_ADDRESS);     // Use this for the 16-bit version ADS1115
-MMA8452 MMA1D(0x1D);
-MMA8452 MMA1C(0x1C);
+Adafruit_ADS1115 ads; 
 BNO055 BNO(0X28);	//I2C address selection pin LOW BNO055
 BNO080 bno08x;
-WiFiUDP WiFiUDPFromAOG;
-WiFiUDP WiFiUDPToAOG;
+AsyncUDP WiFiUDPFromAOG;
+AsyncUDP WiFiUDPToAOG;
+
 EthernetUDP EthUDPToAOG;
 EthernetUDP EthUDPFromAOG;
 WebServer WiFi_Server(80);
 
+byte mainLoopDelay = 0;
 TaskHandle_t taskHandle_Eth_connect;
 TaskHandle_t taskHandle_WiFi_connect;
 TaskHandle_t taskHandle_DataFromAOGUSB; bool USBDataTaskRunning = false;
-TaskHandle_t taskHandle_DataFromAOGWiFi; bool WiFiDataTaskRunning = false;
 TaskHandle_t taskHandle_DataFromAOGEth; bool EthDataTaskRunning = false;
 TaskHandle_t taskHandle_WebIO;
 TaskHandle_t taskHandle_LEDBlink;
@@ -232,20 +238,20 @@ TaskHandle_t taskHandle_LEDBlink;
 // Variables --------------------------------------------------------------------------------------
 // WiFi status LED blink times: searching WIFI: blinking 4x faster; connected: blinking as times set; data available: light on; no data for 2 seconds: blinking
 unsigned long LED_WIFI_time = 0, DataFromAOGTime = 0;
-#define LED_WIFI_pulse 1000   //light on in ms 
-#define LED_WIFI_pause 700    //light off in ms
+#define LED_WIFI_pulse 2000   //light on in ms 
+#define LED_WIFI_pause 1500    //light off in ms
 boolean LED_WIFI_ON = false;
 
 //WIFI+Ethernet
-unsigned long WebIOTimeOut = 0, WiFi_network_search_timeout = 0;
+unsigned long WebIOTimeOut = 0, WebIOLastUsePlus3 = 0, WiFi_network_search_timeout = 0, Eth_network_search_timeout = 0;
 byte Eth_connect_step, WiFi_connect_step = 10, WiFi_STA_connect_call_nr = 1, WiFi_netw_nr = 0, my_WiFi_Mode = 0; // WIFI_STA = 1 = Workstation  WIFI_AP = 2  = Accesspoint
 IPAddress WiFi_ipDestination, Eth_ipDestination; //set in network.ino
-bool EthUDPRunning = false, WebIORunning = true, WiFiUDPRunning = false, newDataFromAOG = false;
+bool EthUDPRunning = false, WebIORunning = true, WiFiUDPRunning = false, newDataFromAOG = false, task_WiFiConnectRunning = false, task_EthConnectRunning = false;
 
 //loop time variables in microseconds
 const unsigned int Data_LOOP_TIME = 110; //10hz + 10ms to wait for AOG data
 const unsigned int WAS_LOOP_TIME = 20;//50Hz
-unsigned int DataLoopLastTime = 100, now = 100, WASLoopLastTime = 100;
+unsigned int DataLoopNextTime = 100, now = 100, WASLoopNextTime = 100;
 byte watchdogTimer = 0;
 
 //program flow
@@ -296,45 +302,43 @@ long argVal = 0;
 void setup() {
 	delay(300);//wait for power to stabilize
 	delay(300);//wait for IO chips to get ready
-	
+
 	//init USB
-	Serial.begin(38400);
+	Serial.begin(Set.BaudRate);
 	delay(200); //without waiting, no serial print
-	Serial.println();	
-	
+	Serial.println();
+
 	//get EEPROM data
 	restoreEEprom();
 	delay(100);
 
+	// for PWM High to Low interpolator
+	highLowPerDeg = ((float)(Set.highPWM - Set.lowPWM)) / Set.MotorSlowDriveDegrees;
+
 	//write PGN to output sentence	
-	if (Set.aogVersion == 17) {
-		steerToAOG[0] = FromAOGSentenceHeader[2];
-		steerToAOG[1] = steerDataToAOGHeader;  //same PGN as V4.6 or higher
-		DataToAOGLength = steerDataSentenceToAOGLengthV17;
-		incomSentenceDigit = 2;
-	}
-	else {
-		steerToAOG[0] = FromAOGSentenceHeader[0];   //0x80
-		steerToAOG[1] = FromAOGSentenceHeader[1];   //0x81
-		steerToAOG[2] = FromAOGSentenceHeader[2];   //0x7F
-		steerToAOG[3] = steerDataToAOGHeader;
-		steerToAOG[4] = steerDataSentenceToAOGLength - 6; //length of data = all - header - length - CRC
-		DataToAOGLength = steerDataSentenceToAOGLength;
-		incomSentenceDigit = 0;
-	}
+	steerToAOG[0] = FromAOGSentenceHeader[0];   //0x80
+	steerToAOG[1] = FromAOGSentenceHeader[1];   //0x81
+	steerToAOG[2] = FromAOGSentenceHeader[2];   //0x7F
+	steerToAOG[3] = steerDataToAOGHeader;
+	steerToAOG[4] = steerDataSentenceToAOGLength - 6; //length of data = all - header - length - CRC
+	incomSentenceDigit = 0;
+
+	Serial.print("ESP code Version Nr ");
+	Serial.print(vers_nr);
+	Serial.println(VersionTXT);
 
 	//set GPIOs
 	assignGPIOs_start_extHardware();
 	delay(200);
 
-    //start Ethernet
-    if (Set.DataTransVia == 10) {
-        Eth_connect_step = 10;
-        xTaskCreate(Eth_handle_connection, "EthConnectHandle", 3072, NULL, 1, &taskHandle_Eth_connect);
-        delay(500);
-    }
-    else { Eth_connect_step = 255; }
-        
+	//start Ethernet
+	if (Set.DataTransVia == 10) {
+		Eth_connect_step = 10;
+		xTaskCreate(Eth_handle_connection, "EthConnectHandle", 3072, NULL, 1, &taskHandle_Eth_connect);
+		delay(500);
+	}
+	else { Eth_connect_step = 255; }
+
 	WiFi_connect_step = 10;//step 10 = begin of starting a WiFi connection
 
 	//start WiFi
@@ -346,19 +350,14 @@ void setup() {
 		xTaskCreate(getDataFromAOGUSB, "DataFromAOGHandleUSB", 5000, NULL, 1, &taskHandle_DataFromAOGUSB);
 	}
 	else {
-		if (Set.DataTransVia < 10) {//WiFi UDP
-			xTaskCreate(getDataFromAOGWiFi, "DataFromAOGHandleWiFi", 5000, NULL, 1, &taskHandle_DataFromAOGWiFi);
-		}
-		else {
-			if (Set.DataTransVia == 10) {//Ethernet UDP
-				xTaskCreate(getDataFromAOGEth, "DataFromAOGHandleEth", 5000, NULL, 1, &taskHandle_DataFromAOGEth);
-			}
+		if (Set.DataTransVia == 10) {//Ethernet UDP
+			xTaskCreate(getDataFromAOGEth, "DataFromAOGHandleEth", 5000, NULL, 1, &taskHandle_DataFromAOGEth);
 		}
 	}
 	delay(500);
 
 	//handle WiFi LED status
-	xTaskCreate(WiFi_LED_blink, "WiFiLEDBlink", 3072, NULL, 0, &taskHandle_LEDBlink);
+	xTaskCreate(WiFi_LED_blink_and_Connection_check, "WiFiLEDBlink", 3072, NULL, 0, &taskHandle_LEDBlink);
 	delay(500);
 
 	vTaskDelay(5000); //waiting for other tasks to start
@@ -372,8 +371,13 @@ void loop() {
 	//runs allways (not in timed loop)	
 
 	//new data from AOG? Data comes via extra task and is written into byte array. Parsing called here
-	if (incommingDataLength[incommingBytesArrayNrToParse] != 0) { parseDataFromAOG(); }
-	else { vTaskDelay(3); }//wait if no new data to give time to other tasks 
+	for (;;) {
+		if (incommingBytesArrayNr == incommingBytesArrayNrToParse) {
+			vTaskDelay(2);//3 wait if no new data to give time to other tasks 
+			break;
+		}
+		else { parseDataFromAOG(); }
+	}
 
 
 	//check, if steering wheel is moved. Debounce set to LOW in timed loop 10Hz
@@ -442,11 +446,11 @@ void loop() {
 				steerEnable = true;
 			}
 		}
-		else{
+		else {
 			steerEnable = false;
 			steerEnableOld = true;//reset first run, so next time will turn on
 		}
-		
+
 		steerSwitch = steerEnable;
 		break;
 	}
@@ -493,18 +497,18 @@ void loop() {
 		pulseCount = 0; //Reset counters if Autosteer is offline  
 	}
 
-
+	vTaskDelay(mainLoopDelay);
 
 	//timed loop for WAS
 	// Loop triggers every 20 msec
 	now = millis();
 
-	if (now - WASLoopLastTime >= WAS_LOOP_TIME)
+	if (now > WASLoopNextTime)
 	{
-		WASLoopLastTime = now;
+		WASLoopNextTime = now + WAS_LOOP_TIME;
 
-		SetRelays(); //turn on off sections, do in timed loop, if new data comes in
-		
+		if (SectRelaysUsed) { SetRelays(); } //turn on off sections, do in timed loop, if new data comes in
+
 		encDebounce = LOW; //reset steerEncoder debounce
 
 		//If connection lost to AgOpenGPS, the watchdog will count up and turn off steering
@@ -512,23 +516,24 @@ void loop() {
 
 		//steering position and steer angle
 		switch (Set.WASType) {
-		case 1:  // ADS 1115 single
-			adc.setMux(ADS1115_REG_CONFIG_MUX_SINGLE_0);
-			steeringPosition = adc.getConversion();
-			adc.triggerConversion();
-			steeringPosition = steeringPosition >> 1; //divide by 2
+		case 1:
+			steeringPosition = ads.getLastConversionResults();
+			//steeringPosition = steeringPosition >> 1; //divide by 2
+			// Start another conversion.
+			ads.startADCReading(ADS1X15_REG_CONFIG_MUX_SINGLE_0, /*continuous=*/false);
 			break;
-		case 2:  // ADS 1115 differential
-			adc.setMux(ADS1115_REG_CONFIG_MUX_DIFF_0_1);
-			adc.triggerConversion();
-			steeringPosition = adc.getConversion();
-			steeringPosition = steeringPosition >> 1; //divide by 2
+		case 2:
+			steeringPosition = ads.getLastConversionResults();
+			//steeringPosition = steeringPosition >> 1; //divide by 2
+			// Start another conversion.
+			ads.startADCReading(ADS1X15_REG_CONFIG_MUX_DIFF_0_1, /*continuous=*/false);
 			break;
 		default: // directly to arduino
-			steeringPosition = analogRead(Set.WAS_PIN);    vTaskDelay(1);
+			steeringPosition = analogRead(Set.WAS_PIN);    vTaskDelay(2);
 			steeringPosition += analogRead(Set.WAS_PIN);
 			break;
 		}
+		//Serial.print("SteeringPosRAW: "); Serial.println(steeringPosition);
 		actualSteerPosRAW = steeringPosition; // stored for >zero< Funktion
 
 		//center the steering position sensor  
@@ -543,8 +548,14 @@ void loop() {
 		}
 
 		//convert position to steer angle
-		steerAngleActual = ((float)(steeringPosition) / Set.steerSensorCounts);
-
+		steerAngleActual = (steerAngleActual * 0.7) + (((float(steeringPosition)) / Set.steerSensorCounts) * 0.3);
+		
+	/*	Serial.print("steerPos long: "); Serial.print(steeringPosition); 
+		Serial.print(" steerPos float: "); Serial.print(float(steeringPosition));
+		Serial.print(" steerAg Act: "); Serial.print(steerAngleActual);
+		Serial.print(" CountPerDeg: "); Serial.println(Set.steerSensorCounts);
+		*/
+		vTaskDelay(1);
 	}//WAS timed loop
 
 
@@ -552,11 +563,11 @@ void loop() {
 // Loop triggers every 100 msec or when data from AOG came in and sends back gyro heading16, and roll, steer angle etc
 	now = millis();
 
-	if ((now - DataLoopLastTime >= Data_LOOP_TIME) || (newDataFromAOG))
+	if ((now > DataLoopNextTime) || (newDataFromAOG))
 	{
 		newDataFromAOG = false;
 
-		DataLoopLastTime = now;
+		DataLoopNextTime = now + Data_LOOP_TIME;
 
 		//workswitch
 		switch (Set.WorkSW_mode)
@@ -610,7 +621,7 @@ void loop() {
 
 
 
-		//Build Autosteer Packet: Send to agopenGPS V4.3: you must send 10 Byte or 5 Int
+		//Build Autosteer Packet
 		int temInt;
 
 		//actual steer angle
@@ -622,85 +633,7 @@ void loop() {
 			BNO.readIMU();
 		}
 
-		
-		if (Set.MMAInstalled > 0) //roll MMA
-		{
-			switch (Set.MMAInstalled) {
-			case 1:// MMA8452 Inclinometer (1C) 
-				MMA1C.getRawData(&x_, &y_, &z_);
-
-				if (Set.UseMMA_X_Axis == 1)
-					roll16 = x_; //Conversion uint to int
-				else roll16 = y_;
-
-				if (roll16 > 4200)  roll16 = 4200;
-				if (roll16 < -4200) roll16 = -4200;
-				//rollK = map(roll, -4200, 4200, -960, 960); //16 counts per degree (good for 0 - +/-30 degrees) 
-				roll16 = roll16 >> 3;  //divide by 8  +-525
-
-				// limit the differential  
-				diff = roll16 - lastRoll;
-				if (diff > Set.MMA_roll_MAX_STEP) roll16 = lastRoll + Set.MMA_roll_MAX_STEP;
-				else if (diff < -Set.MMA_roll_MAX_STEP) roll16 = lastRoll - Set.MMA_roll_MAX_STEP;
-				lastRoll = roll16;
-
-				//divide by 2 -268 to +268    -17 to +17 degrees
-				rollMMA = float(roll16) * 0.5;
-
-				//if not positive when rolling to the right
-				if (Set.InvertRoll)
-					rollMMA *= -1.0;
-
-				break;
-
-			case 2:// MMA8452 Inclinometer (1D)    
-				MMA1D.getRawData(&x_, &y_, &z_);
-
-				if (Set.UseMMA_X_Axis == 1)
-					roll16 = x_; //Conversion uint to int
-				else roll16 = y_;
-
-				if (roll16 > 4200)  roll16 = 4200;
-				if (roll16 < -4200) roll16 = -4200;
-				//rollK = map(roll, -4200, 4200, -960, 960); //16 counts per degree (good for 0 - +/-30 degrees) 
-				roll16 = roll16 >> 3;  //divide by 8  +-525
-
-				// limit the differential  
-				diff = roll16 - lastRoll;
-				if (diff > Set.MMA_roll_MAX_STEP) roll16 = lastRoll + Set.MMA_roll_MAX_STEP;
-				else if (diff < -Set.MMA_roll_MAX_STEP) roll16 = lastRoll - Set.MMA_roll_MAX_STEP;
-				lastRoll = roll16;
-
-				//divide by 2 -268 to +268    -17 to +17 degrees
-				rollMMA = float(roll16) * 0.5;
-
-				//if not positive when rolling to the right
-				if (Set.InvertRoll)
-					rollMMA *= -1.0;
-				break;
-			}//switch MMA
-
-			//roll filter and output
-			//Kalman filter input: rollK
-			Pc = P + varProcess;
-			G = Pc / (Pc + varRoll);
-			P = (1 - G) * Pc;
-			Xp = roll;
-			Zp = Xp;
-			roll = G * (rollMMA - Zp) + Xp;  //output: roll
-			int temp = (int)(roll * 10);
-			steerToAOG[10] = (byte)(temp >> 8);
-			steerToAOG[9] = (byte)(temp);
-
-
-			if (Set.debugmode) {
-				Serial.print("roll from MMA: "); Serial.print(roll);
-				Serial.print(" filtered roll: "); Serial.println(roll);
-			}
-		}
-
 		if (Set.IMUType > 0) {//imu heading16 --- * 10 in degrees,  V17= *16
-			
 			switch (Set.IMUType) {
 			case 1:// BNO055 heading16
 				heading16 = (int)BNO.euler.head;  //heading16 in degrees * 16 from BNO
@@ -797,73 +730,13 @@ void loop() {
 		//Build Autosteer Packet completed
 		//send packet  0 = USB / 7 = WiFi UDP / 10 = Ethernet UDP
 		if (Set.DataTransVia < 5) {//USB
-			if (Set.aogVersion == 17) {//V 4.3
-				Serial.print(FromAOGSentenceHeader[2]);	Serial.print(",");
-				Serial.print(steerDataToAOGHeader); Serial.print(",");
-				//steerangle			
-				Serial.print(int(steerAngleActual * 100)); Serial.print(",");
-				//steerangle set point NOT used in AOG!!
-				Serial.print(int(steerAngleSetPoint * 100)); Serial.print(",");
-				//heading from BNO
-				if (Set.IMUType != 0) { Serial.print(int(heading*16)); }
-				else { Serial.print(0); }
-				Serial.print(",");
-				//roll from MMA
-				Serial.print(int(roll * 100)); Serial.print(",");
-				//switch byte
-				Serial.print(steerToAOG[11]); Serial.print(",");
-				//PWM
-				Serial.print(steerToAOG[12]);
-				Serial.println();
-			}
-			else {//V4.6
-				Serial.write(steerToAOG, sizeof(steerToAOG));
-				//Serial.println("send Data via USB");
-			}
+			Serial.write(steerToAOG, sizeof(steerToAOG));
+			//Serial.println("send Data via USB");
 		}
 		else {
 			if (Set.DataTransVia < 10) {//WiFi UDP
 				if (WiFiUDPRunning) {
-					if (Set.aogVersion == 17) {
-						//actual steer angle
-						int temp = (100 * steerAngleActual);
-						steerToAOG[2] = (byte)(temp >> 8);
-						steerToAOG[3] = (byte)(temp);
-
-						//imu heading16 --- * 16 in degrees
-						if (Set.IMUType != 0) {
-							temp = int(heading * 16);
-						}
-						else { temp = 0; }
-						steerToAOG[4] = (byte)(temp >> 8);
-						steerToAOG[5] = (byte)(temp);
-
-
-						//Vehicle roll --- * 16 in degrees
-						if (Set.MMAInstalled > 0) {
-							temp = int(roll * 16);
-						}
-						else { temp = 0; }                //no Dogs installed
-						steerToAOG[6] = (byte)(temp >> 8);
-						steerToAOG[7] = (byte)(temp);
-
-						//switch byte
-						steerToAOG[8] = switchByte;
-
-						//pwm value
-						if (pwmDisplay < 0) pwmDisplay *= -1;
-						steerToAOG[9] = pwmDisplay;
-
-						WiFiUDPToAOG.beginPacket(WiFi_ipDestination, Set.PortDestination);
-						WiFiUDPToAOG.write(steerToAOG, 10);
-						WiFiUDPToAOG.endPacket();
-
-					}
-					else {
-						WiFiUDPToAOG.beginPacket(WiFi_ipDestination, Set.PortDestination);
-						WiFiUDPToAOG.write(steerToAOG, sizeof(steerToAOG));
-						WiFiUDPToAOG.endPacket();
-					}
+					WiFiUDPToAOG.writeTo(steerToAOG, sizeof(steerToAOG), WiFi_ipDestination, Set.PortDestination);
 				}
 			}
 			else {//Ethernet
@@ -892,8 +765,6 @@ void loop() {
 			Serial.print("ESP time (millis): ");
 			Serial.println(millis());
 		}
-
-		vTaskDelay(1);//all done give time to other tasks
 
 	}  //end of  data timed loop
 }
